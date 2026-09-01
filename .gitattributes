@@ -1,0 +1,14 @@
+# Normaliza todo archivo de texto a LF sin importar el SO donde se
+# clonee/checkee, para que Biome (que espera LF) no marque falsos
+# errores de formato en Windows (core.autocrlf).
+* text=auto eol=lf
+
+# Binarios: nunca tocar sus bytes.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary
