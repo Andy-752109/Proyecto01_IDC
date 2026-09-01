@@ -1,0 +1,49 @@
+{
+  "name": "annotation-portal",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch server/src/index.ts",
+    "build": "vite build",
+    "start": "cross-env NODE_ENV=production tsx server/src/index.ts",
+    "typecheck": "tsc -p tsconfig.server.json --noEmit && tsc -p tsconfig.client.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:bdd": "cucumber-js",
+    "check": "biome check .",
+    "check:fix": "biome check --write .",
+    "format": "biome format --write ."
+  },
+  "dependencies": {
+    "cross-env": "^7.0.3",
+    "dotenv": "^17.4.2",
+    "drizzle-orm": "^0.38.3",
+    "express": "^4.21.2",
+    "konva": "^9.3.16",
+    "minio": "^8.0.2",
+    "mysql2": "^3.11.5",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-konva": "^19.0.3",
+    "recharts": "^2.13.3",
+    "tsx": "^4.19.2",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@cucumber/cucumber": "^11.1.1",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "@vitejs/plugin-react": "^4.3.4",
+    "drizzle-kit": "^0.30.1",
+    "jsdom": "^25.0.1",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.6",
+    "vitest": "^2.1.8"
+  }
+}
