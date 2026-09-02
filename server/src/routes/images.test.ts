@@ -110,3 +110,96 @@ describe('POST /api/images', () => {
     await trackCreatedImage(response.body);
   });
 });
+
+describe('GET /api/images', () => {
+  it('lista las imágenes existentes, más reciente primero, con url para mostrarlas', async () => {
+    const upload = await request(app)
+      .post('/api/images')
+      .attach('image', VALID_JPEG, { filename: 'listtest.jpg', contentType: 'image/jpeg' });
+    await trackCreatedImage(upload.body);
+
+    const response = await request(app).get('/api/images');
+
+    expect(response.status).toBe(200);
+    expect(Array.isArray(response.body.images)).toBe(true);
+    const found = response.body.images.find(
+      (image: { id: number }) => image.id === upload.body.image.id,
+    );
+    expect(found).toMatchObject({
+      filename: 'listtest.jpg',
+      url: `/api/images/${upload.body.image.id}/file`,
+    });
+  });
+});
+
+describe('GET /api/images/:id', () => {
+  it('devuelve la metadata de una imagen existente', async () => {
+    const upload = await request(app)
+      .post('/api/images')
+      .attach('image', VALID_PNG, { filename: 'detail.png', contentType: 'image/png' });
+    await trackCreatedImage(upload.body);
+    const id = upload.body.image.id;
+
+    const response = await request(app).get(`/api/images/${id}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.image).toMatchObject({
+      id,
+      filename: 'detail.png',
+      width: 1,
+      height: 1,
+      url: `/api/images/${id}/file`,
+    });
+  });
+
+  it('responde 404 si la imagen no existe', async () => {
+    const response = await request(app).get('/api/images/999999999');
+    expect(response.status).toBe(404);
+  });
+
+  it('responde 400 si el id no es válido', async () => {
+    const response = await request(app).get('/api/images/no-es-un-id');
+    expect(response.status).toBe(400);
+  });
+});
+
+describe('GET /api/images/:id/file', () => {
+  it('sirve los bytes reales de la imagen almacenada en MinIO', async () => {
+    const upload = await request(app)
+      .post('/api/images')
+      .attach('image', VALID_PNG, { filename: 'file-test.png', contentType: 'image/png' });
+    await trackCreatedImage(upload.body);
+    const id = upload.body.image.id;
+
+    const response = await request(app).get(`/api/images/${id}/file`);
+
+    expect(response.status).toBe(200);
+    expect(response.headers['content-type']).toBe('image/png');
+    expect(Buffer.compare(response.body as Buffer, VALID_PNG)).toBe(0);
+  });
+
+  it('responde 404 si la imagen no existe', async () => {
+    const response = await request(app).get('/api/images/999999999/file');
+    expect(response.status).toBe(404);
+  });
+
+  it('responde 500 en JSON (sin exponer el stack trace) si el objeto no está en MinIO', async () => {
+    // Simula un registro cuya metadata existe en MariaDB pero cuyo archivo
+    // nunca llegó a MinIO (ej. datos de seed sin objeto real detrás).
+    const [result] = await db.insert(images).values({
+      filename: 'huerfano.png',
+      storageKey: 'images/no-existe-en-minio.png',
+      mimeType: 'image/png',
+      sizeBytes: 1,
+      width: 1,
+      height: 1,
+    });
+    createdImageIds.push(result.insertId);
+
+    const response = await request(app).get(`/api/images/${result.insertId}/file`);
+
+    expect(response.status).toBe(500);
+    expect(response.type).toBe('application/json');
+    expect(response.body.error).toBe('Error interno del servidor');
+  });
+});
