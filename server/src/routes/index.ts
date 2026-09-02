@@ -8,8 +8,8 @@ apiRouter.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
 
-apiRouter.use('/categories', categoriesRouter);
 apiRouter.use('/annotations', annotationsRouter);
+apiRouter.use('/categories', categoriesRouter);
 
 // Otros routers de features (imágenes, dashboard, export COCO, ...) se
 // montan aquí conforme se implementen, ej:
