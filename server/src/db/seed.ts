@@ -1,3 +1,4 @@
+import { pathToFileURL } from 'node:url';
 import { sql } from 'drizzle-orm';
 import { db, pool } from './client';
 import { categories, images } from './schema';
@@ -62,7 +63,8 @@ async function main(): Promise<void> {
   await pool.end();
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+const entryPoint = process.argv[1];
+if (entryPoint !== undefined && import.meta.url === pathToFileURL(entryPoint).href) {
   main().catch((error) => {
     console.error('Error al ejecutar el seeder:', error);
     process.exit(1);
