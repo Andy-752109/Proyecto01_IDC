@@ -27,8 +27,8 @@ haya ambigüedad entre lo documentado y lo que hay en el repo.
 | SPEC-05 | El dataset exportado es un JSON COCO válido con `images`, `annotations` y `categories`, con IDs consistentes entre secciones (7 pts) | 6. Salida COCO | `coco_export_structure.feature` | T-09 |
 | SPEC-06 | El `bbox` se exporta como `[x, y, width, height]` en píxeles absolutos, con `area` coherente e `iscrowd` presente (3 pts) | 6. Salida COCO | `coco_bbox_format.feature` | T-09 |
 | SPEC-07 | El dataset completo se puede descargar como archivo, sin excluir nada (2 pts) — separado de SPEC-06 porque en la rúbrica es un sub-punto distinto | 6. Salida COCO | `coco_full_export.feature` | T-09 |
-| SPEC-08 | La búsqueda soporta operadores booleanos entre categorías (ver "Decisiones abiertas" — alcance aún no confirmado) | 5. Dashboard y búsqueda | `search_operators.feature` | Sin asignar todavía |
-| SPEC-09 | Los filtros por clase, estado y rango de fechas son combinables y los resultados se paginan correctamente | 5. Dashboard y búsqueda | `filters_and_pagination.feature` | Sin asignar todavía |
+| SPEC-08 | La búsqueda soporta el operador AND entre categorías | 5. Dashboard y búsqueda | `search_operators.feature` | T-08 (Esteban) |
+| SPEC-09 | Los filtros por clase, estado y rango de fechas son combinables y los resultados se paginan correctamente | 5. Dashboard y búsqueda | `filters_and_pagination.feature` | T-08 (Esteban) |
 
 ## División de trabajo confirmada por el PM (T-04/T-05/T-06/T-09)
 
@@ -46,6 +46,16 @@ haya ambigüedad entre lo documentado y lo que hay en el repo.
   (SPEC-04 completo: zoom, undo, guardar-y-siguiente, navegación entre imágenes). T-06 es quien
   crea `step-definitions/annotation_navigation.steps.ts`; T-05 no lo incluye.
 - **T-09 (Esteban)**: `/api/export`, solo lectura. Cubre SPEC-05, SPEC-06 y SPEC-07.
+
+## División final de tareas (confirmada por el PM)
+
+- **T-05 (Ale)**: anotador — crear, seleccionar, mover, redimensionar y eliminar bounding boxes;
+  categorías, colores y validación de categoría (SPEC-02 salvo reload, SPEC-03).
+- **T-06 (Ale)**: reload/persistencia al recargar + zoom, undo, navegación y guardar/siguiente
+  (el escenario `@wip` de SPEC-02, y SPEC-04 completo).
+- **T-07 (JuanPa)**: dashboard + métricas/gráficas. No tiene `.feature` propio en este documento
+  todavía — si se agregan escenarios de negocio para el dashboard, van aquí.
+- **T-08 (Esteban)**: búsqueda + filtros/paginación (SPEC-08, SPEC-09).
 
 ## Nota sobre `annotation_navigation.feature` en el checker de T-05
 
