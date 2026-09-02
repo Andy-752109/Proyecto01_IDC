@@ -7,5 +7,5 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["server/src"]
+  "include": ["server/src", "features"]
 }
