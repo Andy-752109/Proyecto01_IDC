@@ -5,7 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApiApp } from '../app';
 import { db, pool } from '../db/client';
 import { images } from '../db/schema';
-import { IMAGES_BUCKET, minioClient } from '../lib/minio';
+import { IMAGES_BUCKET, ensureBucketExists, minioClient } from '../lib/minio';
 
 // SPEC-01 (features/image_upload.feature): solo se aceptan imágenes de tipo
 // y tamaño válidos, con feedback al usuario.
@@ -37,6 +37,7 @@ async function trackCreatedImage(body: { image?: { id: number; storageKey: strin
 
 beforeAll(async () => {
   await migrate(db, { migrationsFolder: './drizzle' });
+  await ensureBucketExists();
 });
 
 afterAll(async () => {

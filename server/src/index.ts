@@ -3,12 +3,17 @@ import { fileURLToPath } from 'node:url';
 import express from 'express';
 import { createApiApp } from './app';
 import { env } from './config/env';
+import { ensureBucketExists } from './lib/minio';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const clientRoot = path.resolve(__dirname, '../../client');
 const clientDist = path.resolve(clientRoot, 'dist');
 
 async function createApp() {
+  // Se verifica/crea una sola vez al arrancar el proceso, no en cada
+  // request de subida.
+  await ensureBucketExists();
+
   const app = createApiApp();
 
   if (env.NODE_ENV === 'production') {

@@ -4,11 +4,12 @@ import { type Request, type Response, Router } from 'express';
 import { imageSize } from 'image-size';
 import multer, { MulterError } from 'multer';
 import { z } from 'zod';
+import { env } from '../config/env';
 import { db } from '../db/client';
 import { images } from '../db/schema';
-import { IMAGES_BUCKET, ensureBucketExists, minioClient } from '../lib/minio';
+import { IMAGES_BUCKET, minioClient } from '../lib/minio';
 
-export const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
+export const MAX_IMAGE_SIZE_BYTES = env.MAX_UPLOAD_MB * 1024 * 1024;
 export const ALLOWED_IMAGE_MIME_TYPES = ['image/jpeg', 'image/png'] as const;
 
 class UnsupportedImageTypeError extends Error {}
@@ -107,7 +108,6 @@ imagesRouter.post('/', async (req, res, next) => {
   const storageKey = `images/${randomUUID()}-${sanitizeFilename(file.originalname)}`;
 
   try {
-    await ensureBucketExists();
     await minioClient.putObject(IMAGES_BUCKET, storageKey, file.buffer, file.size, {
       'Content-Type': file.mimetype,
     });
