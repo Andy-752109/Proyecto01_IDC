@@ -18,36 +18,55 @@ haya ambigüedad entre lo documentado y lo que hay en el repo.
 
 ## Trazabilidad regla de negocio → SPEC → .feature
 
-| SPEC ID | Regla de negocio | Sección rúbrica | Archivo .feature |
-|---------|-------------------|------------------|-------------------|
-| SPEC-01 | Solo se aceptan imágenes de tipo y tamaño válidos, con feedback al usuario | 4. Portal de anotación | `image_upload.feature` |
-| SPEC-02 | Una caja (bounding box) se puede crear, mover, redimensionar y borrar, y persiste al recargar | 4. Portal de anotación | `bounding_box_create_edit.feature` |
-| SPEC-03 | Ninguna caja puede guardarse sin una categoría válida asignada | 4. Portal de anotación | `bounding_box_requires_category.feature` |
-| SPEC-04 | El usuario puede hacer zoom, deshacer, navegar entre imágenes y usar "guardar y siguiente", incluyendo qué pasa si hay cambios sin guardar al navegar | 4. Portal de anotación | `annotation_navigation.feature` |
-| SPEC-05 | El dataset exportado es un JSON COCO válido con `images`, `annotations` y `categories`, con IDs consistentes entre secciones (7 pts) | 6. Salida COCO | `coco_export_structure.feature` |
-| SPEC-06 | El `bbox` se exporta como `[x, y, width, height]` en píxeles absolutos, con `area` coherente e `iscrowd` presente (3 pts) | 6. Salida COCO | `coco_bbox_format.feature` |
-| SPEC-07 | El dataset completo se puede descargar como archivo, sin excluir nada (2 pts) — separado de SPEC-06 porque en la rúbrica es un sub-punto distinto | 6. Salida COCO | `coco_full_export.feature` |
-| SPEC-08 | La búsqueda soporta operadores booleanos entre categorías (ver "Decisiones abiertas" — alcance aún no confirmado) | 5. Dashboard y búsqueda | `search_operators.feature` |
-| SPEC-09 | Los filtros por clase, estado y rango de fechas son combinables y los resultados se paginan correctamente | 5. Dashboard y búsqueda | `filters_and_pagination.feature` |
+| SPEC ID | Regla de negocio | Sección rúbrica | Archivo .feature | Tarea |
+|---------|-------------------|------------------|-------------------|-------|
+| SPEC-01 | Solo se aceptan imágenes de tipo y tamaño válidos, con feedback al usuario | 4. Portal de anotación | `image_upload.feature` | T-04 |
+| SPEC-02 | Una caja (bounding box) se puede crear, mover, redimensionar y borrar, y persiste al recargar | 4. Portal de anotación | `bounding_box_create_edit.feature` | T-05 (excepto el escenario `@wip` de reload, que es T-06) |
+| SPEC-03 | Ninguna caja puede guardarse sin una categoría válida asignada | 4. Portal de anotación | `bounding_box_requires_category.feature` | T-05 |
+| SPEC-04 | El usuario puede hacer zoom, deshacer, navegar entre imágenes y usar "guardar y siguiente" | 4. Portal de anotación | `annotation_navigation.feature` | T-06 completo (issue #6: "persistir anotaciones + herramientas del anotador") |
+| SPEC-05 | El dataset exportado es un JSON COCO válido con `images`, `annotations` y `categories`, con IDs consistentes entre secciones (7 pts) | 6. Salida COCO | `coco_export_structure.feature` | T-09 |
+| SPEC-06 | El `bbox` se exporta como `[x, y, width, height]` en píxeles absolutos, con `area` coherente e `iscrowd` presente (3 pts) | 6. Salida COCO | `coco_bbox_format.feature` | T-09 |
+| SPEC-07 | El dataset completo se puede descargar como archivo, sin excluir nada (2 pts) — separado de SPEC-06 porque en la rúbrica es un sub-punto distinto | 6. Salida COCO | `coco_full_export.feature` | T-09 |
+| SPEC-08 | La búsqueda soporta operadores booleanos entre categorías (ver "Decisiones abiertas" — alcance aún no confirmado) | 5. Dashboard y búsqueda | `search_operators.feature` | Sin asignar todavía |
+| SPEC-09 | Los filtros por clase, estado y rango de fechas son combinables y los resultados se paginan correctamente | 5. Dashboard y búsqueda | `filters_and_pagination.feature` | Sin asignar todavía |
+
+## División de trabajo confirmada por el PM (T-04/T-05/T-06/T-09)
+
+- **T-04 (JuanPa)**: `/api/images` + MinIO. Cubre SPEC-01.
+- **T-05 (Ale, este documento)**: `/api/categories` (solo GET, las 4 categorías vienen del seeder) y
+  `/api/annotations` completo (`POST`, `PATCH /:id`, `DELETE /:id`) con validación Zod 4 —
+  incluida la regla de SPEC-03 (rechazar caja sin categoría válida) y de coordenadas/dimensiones
+  válidas. En el frontend: el canvas de Konva para crear, mover, redimensionar y borrar cajas.
+  Cubre SPEC-02 (excepto reload) y SPEC-03. **No incluye zoom, undo, navegación ni "guardar y
+  siguiente"** — eso es 100% T-06, aunque zoom/undo no dependan de un endpoint nuevo, para que
+  toda la lógica de "canvas tools" viva en una sola tarea y T-05 no se infle.
+- **T-06 (sin asignar todavía, issue #6: "persistir anotaciones + herramientas del anotador")**:
+  `GET /api/images/:id/annotations` (releer anotaciones al recargar la página) — el escenario
+  `@wip` dentro de `bounding_box_create_edit.feature` — más **todo** `annotation_navigation.feature`
+  (SPEC-04 completo: zoom, undo, guardar-y-siguiente, navegación entre imágenes). T-06 es quien
+  crea `step-definitions/annotation_navigation.steps.ts`; T-05 no lo incluye.
+- **T-09 (Esteban)**: `/api/export`, solo lectura. Cubre SPEC-05, SPEC-06 y SPEC-07.
+
+## Nota sobre `annotation_navigation.feature` en el checker de T-05
+
+Como T-05 no trae `step-definitions/annotation_navigation.steps.ts`, al correr
+`npm run test:bdd` esos escenarios van a salir como **undefined**, no como fallando en rojo —
+es el comportamiento esperado mientras T-06 no exista. No se etiquetó `@wip` porque el archivo
+completo pertenece a otra tarea, no es "trabajo pendiente dentro de T-05".
+
+El único escenario `@wip` real que sí vive dentro del scope de T-05 es "Annotations persist
+after reloading the image" en `bounding_box_create_edit.feature` (el resto de ese archivo sí es
+de T-05 y sí tiene step definitions en rojo).
 
 ## Decisiones abiertas (pendientes de confirmar antes de implementar/TDD)
 
-### 🔴 Alcance real de los operadores de búsqueda (SPEC-08)
+### ✅ Resuelto: alcance de los operadores de búsqueda (SPEC-08)
 
-La rúbrica dice "Búsqueda con operadores, tipo car AND person, resuelta en
-SQL" — da un solo ejemplo (AND) pero usa "operadores" en plural, lo que
-sugiere que podría esperarse más de uno. `search_operators.feature` por
-ahora asume que **AND, OR y NOT** están en scope y lo dice explícito en un
-comentario al inicio del archivo. Esto se puede resolver de dos formas:
-
-1. Preguntarle directamente al profesor en el canal (como él mismo ofreció).
-2. Si no hay respuesta a tiempo, quedarnos con la asunción documentada y
-   dejar claro en el README o en el PR que fue una decisión de equipo, no
-   un vacío sin resolver.
-
-Si la respuesta es que solo se evalúa AND, hay que borrar los escenarios de
-OR y NOT en `search_operators.feature` para no gastar tiempo implementando
-algo fuera de rúbrica.
+**Decisión del PM (2026-09-02):** solo se implementa **AND**. La rúbrica solo dio "car AND
+person" como ejemplo; OR y NOT eran una asunción nuestra pendiente de confirmar, y se
+descartaron para no rehacer trabajo más adelante sobre algo que el profesor no pidió.
+`search_operators.feature` y su step definitions ya se simplificaron para reflejar esto — el
+`Feature` ahora se llama "Search with the AND operator over categories", sin escenarios de OR/NOT.
 
 ### 🟡 Cómo se verifica "resuelto en SQL, no en memoria" (SPEC-08)
 
