@@ -13,7 +13,10 @@
     "test:bdd": "cucumber-js",
     "check": "biome check .",
     "check:fix": "biome check --write .",
-    "format": "biome format --write ."
+    "format": "biome format --write .",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx server/src/db/migrate.ts",
+    "db:seed": "tsx server/src/db/seed.ts"
   },
   "dependencies": {
     "cross-env": "^7.0.3",
