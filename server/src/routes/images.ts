@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { eq } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import { type Request, type Response, Router } from 'express';
 import { imageSize } from 'image-size';
 import multer, { MulterError } from 'multer';
@@ -36,6 +36,14 @@ const uploadedFileSchema = z.object({
 
 function sanitizeFilename(filename: string): string {
   return filename.replace(/[^a-zA-Z0-9.-]/g, '-');
+}
+
+const idParamSchema = z.object({
+  id: z.coerce.number().int().positive(),
+});
+
+function serializeImage(row: typeof images.$inferSelect) {
+  return { ...row, url: `/api/images/${row.id}/file` };
 }
 
 function runUpload(req: Request, res: Response): Promise<void> {
@@ -114,8 +122,67 @@ imagesRouter.post('/', async (req, res, next) => {
     });
 
     const [created] = await db.select().from(images).where(eq(images.id, result.insertId));
+    if (!created) {
+      throw new Error('No se pudo leer el registro recién insertado');
+    }
 
-    res.status(201).json({ message: 'Image uploaded successfully', image: created });
+    res
+      .status(201)
+      .json({ message: 'Image uploaded successfully', image: serializeImage(created) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+imagesRouter.get('/', async (_req, res, next) => {
+  try {
+    const rows = await db.select().from(images).orderBy(desc(images.createdAt));
+    res.status(200).json({ images: rows.map(serializeImage) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+imagesRouter.get('/:id', async (req, res, next) => {
+  const parsedParams = idParamSchema.safeParse(req.params);
+  if (!parsedParams.success) {
+    res.status(400).json({ error: 'El id de la imagen no es válido' });
+    return;
+  }
+
+  try {
+    const [row] = await db.select().from(images).where(eq(images.id, parsedParams.data.id));
+    if (!row) {
+      res.status(404).json({ error: 'Imagen no encontrada' });
+      return;
+    }
+    res.status(200).json({ image: serializeImage(row) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+imagesRouter.get('/:id/file', async (req, res, next) => {
+  const parsedParams = idParamSchema.safeParse(req.params);
+  if (!parsedParams.success) {
+    res.status(400).json({ error: 'El id de la imagen no es válido' });
+    return;
+  }
+
+  try {
+    const [row] = await db.select().from(images).where(eq(images.id, parsedParams.data.id));
+    if (!row) {
+      res.status(404).json({ error: 'Imagen no encontrada' });
+      return;
+    }
+
+    const objectStream = await minioClient.getObject(IMAGES_BUCKET, row.storageKey);
+    res.status(200).set({
+      'Content-Type': row.mimeType,
+      'Content-Length': String(row.sizeBytes),
+    });
+    objectStream.on('error', next);
+    objectStream.pipe(res);
   } catch (error) {
     next(error);
   }
