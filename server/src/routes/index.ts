@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import { annotationsRouter } from './annotations';
+import { categoriesRouter } from './categories';
 
 export const apiRouter = Router();
 
@@ -6,6 +8,9 @@ apiRouter.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
 
-// Los routers de features (imágenes, anotaciones, categorías, dashboard,
-// export COCO, ...) se montan aquí, ej:
+apiRouter.use('/categories', categoriesRouter);
+apiRouter.use('/annotations', annotationsRouter);
+
+// Otros routers de features (imágenes, dashboard, export COCO, ...) se
+// montan aquí conforme se implementen, ej:
 // apiRouter.use('/images', imagesRouter);
