@@ -7,5 +7,6 @@ module.exports = {
     requireModule: ['tsx/cjs'],
     format: ['progress-bar'],
     publishQuiet: true,
+    tags: 'not @wip',
   },
 };
