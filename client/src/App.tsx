@@ -1,9 +1,9 @@
+import { useState } from 'react';
 import { AnnotationWorkspace } from './features/annotations/AnnotationWorkspace';
+import { Dashboard } from './features/dashboard/Dashboard';
 import { ExportCocoButton } from './features/export/ExportCocoButton';
 import { ImageUploadPanel } from './features/images/ImageUploadPanel';
-import { useState } from 'react';
-import { Dashboard } from './features/dashboard/Dashboard';
-type View = 'images' | 'annotate' | 'dashboard';
+type View = 'images' | 'annotate' | 'dashboard' | 'coco';
 
 export function App() {
   const [view, setView] = useState<View>('images');
@@ -21,10 +21,14 @@ export function App() {
         <button type="button" onClick={() => setView('dashboard')} disabled={view === 'dashboard'}>
           Dashboard
         </button>
+        <button type="button" onClick={() => setView('coco')} disabled={view === 'coco'}>
+          COCO
+        </button>
       </nav>
       {view === 'images' && <ImageUploadPanel />}
       {view === 'annotate' && <AnnotationWorkspace />}
       {view === 'dashboard' && <Dashboard />}
+      {view === 'dashboard' && <ExportCocoButton />}
     </main>
   );
 }
