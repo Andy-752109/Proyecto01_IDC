@@ -1,5 +1,5 @@
-import { ImageUploadPanel } from './features/images/ImageUploadPanel';
 import { AnnotationWorkspace } from './features/annotations/AnnotationWorkspace';
+import { ImageUploadPanel } from './features/images/ImageUploadPanel';
 
 // TODO(Ajuste #1, pendiente tras este merge): reemplazar el mock por la
 // imagen real usando el contrato de T-04, ya mergeado a main.
