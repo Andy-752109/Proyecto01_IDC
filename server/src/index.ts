@@ -1,18 +1,20 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
+import { createApiApp } from './app';
 import { env } from './config/env';
-import { apiRouter } from './routes';
+import { ensureBucketExists } from './lib/minio';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const clientRoot = path.resolve(__dirname, '../../client');
 const clientDist = path.resolve(clientRoot, 'dist');
 
 async function createApp() {
-  const app = express();
+  // Se verifica/crea una sola vez al arrancar el proceso, no en cada
+  // request de subida.
+  await ensureBucketExists();
 
-  app.use(express.json());
-  app.use('/api', apiRouter);
+  const app = createApiApp();
 
   if (env.NODE_ENV === 'production') {
     // En producción, Express sirve el build estático de Vite. Un solo
