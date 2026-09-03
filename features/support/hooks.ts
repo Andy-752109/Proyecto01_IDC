@@ -1,9 +1,10 @@
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { After, AfterAll, Before, BeforeAll } from '@cucumber/cucumber';
+import { createApiApp } from '../../server/src/app';
 import { db, pool } from '../../server/src/db/client';
 import { annotations } from '../../server/src/db/schema';
-import { createTestApp } from '../../server/src/testApp';
+import { ensureBucketExists } from '../../server/src/lib/minio';
 import { resetTestState } from './testState';
 
 let server: Server;
@@ -14,7 +15,9 @@ let server: Server;
 export let baseUrl = '';
 
 BeforeAll(async () => {
-  const app = createTestApp();
+  await ensureBucketExists();
+
+  const app = createApiApp();
   server = app.listen(0);
   await new Promise<void>((resolve) => {
     server.once('listening', resolve);

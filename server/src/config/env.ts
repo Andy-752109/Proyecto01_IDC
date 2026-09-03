@@ -9,6 +9,8 @@ const envSchema = z.object({
 
   DATABASE_URL: z.string().min(1, 'DATABASE_URL es requerido'),
 
+  MAX_UPLOAD_MB: z.coerce.number().int().positive().default(10),
+
   MINIO_ENDPOINT: z.string().min(1),
   MINIO_PORT: z.coerce.number().int().positive(),
   MINIO_USE_SSL: z
