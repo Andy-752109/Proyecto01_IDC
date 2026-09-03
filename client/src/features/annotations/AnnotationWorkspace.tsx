@@ -180,6 +180,29 @@ export function AnnotationWorkspace() {
     setPendingNavigation(null);
   }
 
+  // "Guardar y siguiente": save any pending draft (if a category was
+  // chosen), then jump to the next PENDING image — not just the next one
+  // in the list, which is what plain "Siguiente" does.
+  async function handleSaveAndNext() {
+    if (currentImage.status !== 'ready') {
+      return;
+    }
+    if (draft) {
+      if (pendingCategoryId === null) {
+        return;
+      }
+      const succeeded = await saveDraft(pendingCategoryId);
+      if (!succeeded) {
+        return;
+      }
+    }
+    setSelectedId(null);
+    setPendingCategoryId(null);
+    setSavedMessage(null);
+    setPendingNavigation(null);
+    currentImage.goToNextPending();
+  }
+
   if (currentImage.status === 'loading') {
     return <p className="annotation-workspace__hint">Cargando imagen…</p>;
   }
@@ -196,7 +219,7 @@ export function AnnotationWorkspace() {
     );
   }
 
-  const { image, hasNext, hasPrevious } = currentImage;
+  const { image, hasNext, hasPrevious, hasNextPending } = currentImage;
 
   return (
     <div className="annotation-workspace">
@@ -208,6 +231,14 @@ export function AnnotationWorkspace() {
           <span className="annotation-workspace__nav-label">{image.filename}</span>
           <button type="button" onClick={() => handleNavigate('next')} disabled={!hasNext}>
             Siguiente →
+          </button>
+          <button
+            type="button"
+            className="annotation-workspace__save-next"
+            onClick={handleSaveAndNext}
+            disabled={(draft !== null && pendingCategoryId === null) || !hasNextPending || isSaving}
+          >
+            {isSaving ? 'Guardando…' : 'Guardar y siguiente'}
           </button>
         </div>
 
@@ -247,7 +278,12 @@ export function AnnotationWorkspace() {
             <p>Tienes una caja sin guardar. ¿Qué quieres hacer antes de cambiar de imagen?</p>
             <div className="annotation-workspace__actions">
               {pendingCategoryId !== null && (
-                <button type="button" onClick={handleConfirmSaveAndNavigate} disabled={isSaving}>
+                <button
+                  type="button"
+                  className="annotation-workspace__button--primary"
+                  onClick={handleConfirmSaveAndNavigate}
+                  disabled={isSaving}
+                >
                   {isSaving ? 'Guardando…' : 'Guardar y continuar'}
                 </button>
               )}
@@ -272,6 +308,7 @@ export function AnnotationWorkspace() {
             <div className="annotation-workspace__actions">
               <button
                 type="button"
+                className="annotation-workspace__button--primary"
                 onClick={handleSaveDraft}
                 disabled={pendingCategoryId === null || isSaving}
               >

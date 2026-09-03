@@ -1,45 +1,119 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap");
+
+/*
+ * Design tokens for the annotation workspace. Treated as a self-contained
+ * dark "instrument panel" embedded in the page — this workspace is a
+ * precision tool (pixel coordinates, zoom levels, class colors), so the
+ * dark surface + monospace numerics + sharp corners read as technical
+ * rather than decorative. One accent color (--accent) is spent entirely on
+ * the single most consequential action (Guardar y siguiente / Guardar
+ * caja); everything else stays quiet and structural.
+ */
 .annotation-workspace {
+  --bg: #16181c;
+  --surface: #1c1f24;
+  --border: #2b2f36;
+  --border-strong: #3d434c;
+  --text: #e7e5e0;
+  --text-muted: #8b8f98;
+  --accent: #3fa9f5;
+  --accent-ink: #06141f;
+  --danger: #e5484d;
+  --danger-surface: #2a1a1b;
+  --success: #3ddc8c;
+
   display: flex;
-  gap: 24px;
-  align-items: flex-start;
+  gap: 0;
+  align-items: stretch;
   margin-top: 16px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  font-size: 14px;
 }
 
 .annotation-workspace__main {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
+  padding: 16px;
+  flex: 1;
+  min-width: 0;
 }
 
 .annotation-workspace__nav {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
-.annotation-workspace__nav button {
-  padding: 4px 10px;
-  border: 1px solid #333333;
-  background: #ffffff;
+.annotation-workspace__nav button,
+.annotation-canvas__toolbar button,
+.annotation-workspace__undo,
+.annotation-workspace__actions button {
+  padding: 6px 12px;
+  border: 1px solid var(--border-strong);
+  background: transparent;
+  color: var(--text);
   cursor: pointer;
-  font-size: 14px;
+  font-family: inherit;
+  font-size: 13px;
+  transition: border-color 120ms ease, color 120ms ease;
 }
 
-.annotation-workspace__nav button:disabled {
-  border-color: #cccccc;
-  color: #999999;
+.annotation-workspace__nav button:hover:not(:disabled),
+.annotation-canvas__toolbar button:hover:not(:disabled),
+.annotation-workspace__undo:hover:not(:disabled),
+.annotation-workspace__actions button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.annotation-workspace__nav button:disabled,
+.annotation-canvas__toolbar button:disabled,
+.annotation-workspace__undo:disabled,
+.annotation-workspace__actions button:disabled {
+  border-color: var(--border);
+  color: #52565e;
   cursor: not-allowed;
 }
 
 .annotation-workspace__nav-label {
-  font-size: 14px;
-  color: #333333;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* The one bold move: the workflow-critical action gets the accent, solid,
+   with dark text for contrast — everything else stays outlined/quiet. */
+.annotation-workspace__save-next,
+.annotation-workspace__button--primary {
+  margin-left: auto;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+.annotation-workspace__save-next:hover:not(:disabled),
+.annotation-workspace__button--primary:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  filter: brightness(1.08);
+}
+
+.annotation-workspace__save-next:disabled,
+.annotation-workspace__button--primary:disabled {
+  border-color: var(--border);
+  background: var(--border);
+  color: #52565e;
 }
 
 .annotation-canvas__wrapper {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .annotation-canvas__toolbar {
@@ -48,23 +122,10 @@
   gap: 8px;
 }
 
-.annotation-canvas__toolbar button {
-  padding: 4px 10px;
-  border: 1px solid #333333;
-  background: #ffffff;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.annotation-canvas__toolbar button:disabled {
-  border-color: #cccccc;
-  color: #999999;
-  cursor: not-allowed;
-}
-
 .annotation-canvas__zoom-level {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
   font-size: 13px;
-  color: #666666;
+  color: var(--text-muted);
   min-width: 42px;
   text-align: center;
 }
@@ -73,8 +134,9 @@
   max-width: 100%;
   max-height: 80vh;
   overflow: auto;
-  border: 1px solid #d0d0d0;
+  border: 1px solid var(--border-strong);
   width: fit-content;
+  background: #0e0f12;
 }
 
 .annotation-canvas__stage {
@@ -83,74 +145,60 @@
 }
 
 .annotation-workspace__sidebar {
-  min-width: 240px;
+  min-width: 260px;
+  max-width: 280px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  padding: 16px;
+  border-left: 1px solid var(--border);
+  background: var(--surface);
 }
 
-.annotation-workspace__undo {
-  align-self: flex-start;
-  padding: 6px 12px;
-  border: 1px solid #333333;
-  background: #ffffff;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.annotation-workspace__undo:disabled {
-  border-color: #cccccc;
-  color: #999999;
-  cursor: not-allowed;
+.annotation-workspace__hint {
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .annotation-workspace__error {
-  color: #b3261e;
-  font-size: 14px;
+  color: var(--danger);
+  font-size: 13px;
   margin: 0;
 }
 
 .annotation-workspace__success {
-  color: #1e7e34;
-  font-size: 14px;
+  color: var(--success);
+  font-size: 13px;
   margin: 0;
 }
 
 .annotation-workspace__panel {
-  border: 1px solid #d0d0d0;
+  border: 1px solid var(--border-strong);
   padding: 12px;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  background: #212429;
 }
 
 .annotation-workspace__panel--warning {
-  border-color: #b3261e;
-  background: #fdf1f0;
+  border-color: var(--danger);
+  border-width: 1px 1px 1px 3px;
+  background: var(--danger-surface);
 }
 
 .annotation-workspace__panel p {
   margin: 0;
-  font-size: 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text);
 }
 
 .annotation-workspace__actions {
   display: flex;
   gap: 8px;
-}
-
-.annotation-workspace__actions button {
-  padding: 6px 12px;
-  border: 1px solid #333333;
-  background: #ffffff;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.annotation-workspace__actions button:disabled {
-  border-color: #cccccc;
-  color: #999999;
-  cursor: not-allowed;
+  flex-wrap: wrap;
 }
 
 .category-picker {
@@ -160,8 +208,8 @@
 }
 
 .category-picker__empty {
-  color: #999999;
-  font-size: 14px;
+  color: var(--text-muted);
+  font-size: 13px;
 }
 
 .category-picker__item {
@@ -169,21 +217,28 @@
   align-items: center;
   gap: 8px;
   padding: 6px 10px;
-  border: 1px solid #d0d0d0;
-  background: #ffffff;
+  border: 1px solid var(--border-strong);
+  background: transparent;
+  color: var(--text);
   cursor: pointer;
   text-align: left;
-  font-size: 14px;
+  font-family: inherit;
+  font-size: 13px;
+  transition: border-color 120ms ease;
+}
+
+.category-picker__item:hover {
+  border-color: var(--category-color, var(--accent));
 }
 
 .category-picker__item[data-selected="true"] {
-  border-color: var(--category-color, #333333);
+  border-color: var(--category-color, var(--accent));
   border-width: 2px;
 }
 
 .category-picker__swatch {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   flex-shrink: 0;
-  background: var(--category-color, #999999);
+  background: var(--category-color, var(--text-muted));
 }
