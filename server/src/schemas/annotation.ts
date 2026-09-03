@@ -32,3 +32,11 @@ export const updateAnnotationSchema = annotationCoordinatesSchema
   });
 
 export type UpdateAnnotationInput = z.infer<typeof updateAnnotationSchema>;
+
+// GET /api/annotations?imageId=... query params (SPEC-02 reload, T-06).
+// z.coerce.number() because query params always arrive as strings.
+export const listAnnotationsQuerySchema = z.object({
+  imageId: z.coerce.number().int().positive(),
+});
+
+export type ListAnnotationsQuery = z.infer<typeof listAnnotationsQuerySchema>;
