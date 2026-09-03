@@ -5,6 +5,8 @@
 // A single shared object, reset before every scenario, is the simpler
 // trade-off for a suite this size.
 
+import type { ImageMetadata } from '../../client/src/features/annotations/schemas';
+
 export type AnnotationRecord = {
   id: number;
   imageId: number;
@@ -24,6 +26,10 @@ export const testState: {
   lastResponseBody: unknown;
   lastAnnotation: AnnotationRecord | undefined;
   lastAnnotationsList: AnnotationRecord[] | undefined;
+  zoomBefore: number | undefined;
+  zoomAfter: number | undefined;
+  imagesList: ImageMetadata[] | undefined;
+  nextPendingIndex: number | undefined;
 } = {
   currentImageId: undefined,
   drawnCoordinates: undefined,
@@ -31,6 +37,10 @@ export const testState: {
   lastResponseBody: undefined,
   lastAnnotation: undefined,
   lastAnnotationsList: undefined,
+  zoomBefore: undefined,
+  zoomAfter: undefined,
+  imagesList: undefined,
+  nextPendingIndex: undefined,
 };
 
 export function resetTestState(): void {
@@ -40,4 +50,8 @@ export function resetTestState(): void {
   testState.lastResponseBody = undefined;
   testState.lastAnnotation = undefined;
   testState.lastAnnotationsList = undefined;
+  testState.zoomBefore = undefined;
+  testState.zoomAfter = undefined;
+  testState.imagesList = undefined;
+  testState.nextPendingIndex = undefined;
 }
