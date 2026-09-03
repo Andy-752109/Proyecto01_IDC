@@ -5,6 +5,37 @@
   margin-top: 16px;
 }
 
+.annotation-workspace__main {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.annotation-workspace__nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.annotation-workspace__nav button {
+  padding: 4px 10px;
+  border: 1px solid #333333;
+  background: #ffffff;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.annotation-workspace__nav button:disabled {
+  border-color: #cccccc;
+  color: #999999;
+  cursor: not-allowed;
+}
+
+.annotation-workspace__nav-label {
+  font-size: 14px;
+  color: #333333;
+}
+
 .annotation-canvas__wrapper {
   display: flex;
   flex-direction: column;

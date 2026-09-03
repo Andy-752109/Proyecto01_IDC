@@ -64,6 +64,11 @@ export function AnnotationWorkspace() {
     };
   }, []);
 
+  // Navigating to a different image clears selection/draft/save-message
+  // state — handled directly in handleNavigate() below, right before
+  // switching images, so there's no stale selection pointing at a box from
+  // the image we just left.
+
   // Delete/Backspace removes the selected box; Ctrl+Z / Cmd+Z undoes the
   // last action — unless the person is typing somewhere else on the page.
   useEffect(() => {
@@ -120,6 +125,20 @@ export function AnnotationWorkspace() {
     setSelectedId(null);
   }
 
+  function handleNavigate(direction: 'next' | 'previous') {
+    if (currentImage.status !== 'ready') {
+      return;
+    }
+    setSelectedId(null);
+    setPendingCategoryId(null);
+    setSavedMessage(null);
+    if (direction === 'next') {
+      currentImage.goToNext();
+    } else {
+      currentImage.goToPrevious();
+    }
+  }
+
   if (currentImage.status === 'loading') {
     return <p className="annotation-workspace__hint">Cargando imagen…</p>;
   }
@@ -136,22 +155,34 @@ export function AnnotationWorkspace() {
     );
   }
 
-  const { image } = currentImage;
+  const { image, hasNext, hasPrevious } = currentImage;
 
   return (
     <div className="annotation-workspace">
-      <AnnotationCanvas
-        imageUrl={image.url}
-        imageWidth={image.width}
-        imageHeight={image.height}
-        annotations={annotations}
-        categories={categories}
-        draft={draft}
-        selectedId={selectedId}
-        onDrawEnd={handleDrawEnd}
-        onSelect={setSelectedId}
-        onChange={updateAnnotation}
-      />
+      <div className="annotation-workspace__main">
+        <div className="annotation-workspace__nav">
+          <button type="button" onClick={() => handleNavigate('previous')} disabled={!hasPrevious}>
+            ← Anterior
+          </button>
+          <span className="annotation-workspace__nav-label">{image.filename}</span>
+          <button type="button" onClick={() => handleNavigate('next')} disabled={!hasNext}>
+            Siguiente →
+          </button>
+        </div>
+
+        <AnnotationCanvas
+          imageUrl={image.url}
+          imageWidth={image.width}
+          imageHeight={image.height}
+          annotations={annotations}
+          categories={categories}
+          draft={draft}
+          selectedId={selectedId}
+          onDrawEnd={handleDrawEnd}
+          onSelect={setSelectedId}
+          onChange={updateAnnotation}
+        />
+      </div>
 
       <aside className="annotation-workspace__sidebar">
         <button
