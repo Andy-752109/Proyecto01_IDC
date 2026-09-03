@@ -1,5 +1,5 @@
-import { useCallback, useState } from 'react';
-import { annotationSchema } from './schemas';
+import { useCallback, useEffect, useState } from 'react';
+import { annotationSchema, annotationsListSchema } from './schemas';
 import type { Annotation, DraftAnnotation } from './types';
 
 const ANNOTATIONS_ENDPOINT = '/api/annotations';
@@ -10,6 +10,7 @@ type UseAnnotationsResult = {
   annotations: Annotation[];
   draft: DraftAnnotation | null;
   isSaving: boolean;
+  isLoadingAnnotations: boolean;
   error: string | null;
   startDraft: (box: DraftAnnotation) => void;
   cancelDraft: () => void;
@@ -38,7 +39,50 @@ export function useAnnotations(imageId: number): UseAnnotationsResult {
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [draft, setDraft] = useState<DraftAnnotation | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingAnnotations, setIsLoadingAnnotations] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // SPEC-02 (reload): fetch whatever's already saved for this image instead
+  // of always starting from an empty canvas. Runs whenever imageId changes
+  // (including the very first time it becomes a real id).
+  useEffect(() => {
+    if (!imageId) {
+      return;
+    }
+    let cancelled = false;
+    setIsLoadingAnnotations(true);
+    fetch(`${ANNOTATIONS_ENDPOINT}?imageId=${imageId}`)
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error('No se pudieron cargar las anotaciones existentes.');
+        }
+        const data: unknown = await response.json();
+        const parsed = annotationsListSchema.safeParse(data);
+        if (!parsed.success) {
+          throw new Error('La respuesta de anotaciones no tiene el formato esperado.');
+        }
+        if (!cancelled) {
+          setAnnotations(parsed.data);
+        }
+      })
+      .catch((caughtError: unknown) => {
+        if (!cancelled) {
+          setError(
+            caughtError instanceof Error
+              ? caughtError.message
+              : 'Error desconocido al cargar anotaciones.',
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsLoadingAnnotations(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [imageId]);
 
   const startDraft = useCallback((box: DraftAnnotation) => {
     setDraft(box);
@@ -135,6 +179,7 @@ export function useAnnotations(imageId: number): UseAnnotationsResult {
     annotations,
     draft,
     isSaving,
+    isLoadingAnnotations,
     error,
     startDraft,
     cancelDraft,

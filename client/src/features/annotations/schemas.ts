@@ -19,6 +19,9 @@ export const annotationSchema = z.object({
 });
 export type Annotation = z.infer<typeof annotationSchema>;
 
+// GET /api/annotations?imageId= returns a plain array (see annotations.ts).
+export const annotationsListSchema = z.array(annotationSchema);
+
 // Matches serializeImage() in server/src/routes/images.ts: the DB row plus
 // a derived `url` pointing at GET /api/images/:id/file.
 export const imageMetadataSchema = z.object({

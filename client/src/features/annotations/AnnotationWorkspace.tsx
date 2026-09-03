@@ -24,6 +24,7 @@ export function AnnotationWorkspace() {
     annotations,
     draft,
     isSaving,
+    isLoadingAnnotations,
     error,
     startDraft,
     cancelDraft,
@@ -146,6 +147,9 @@ export function AnnotationWorkspace() {
       />
 
       <aside className="annotation-workspace__sidebar">
+        {isLoadingAnnotations && (
+          <p className="annotation-workspace__hint">Cargando anotaciones existentes…</p>
+        )}
         {categoriesError && <p className="annotation-workspace__error">{categoriesError}</p>}
         {error && <p className="annotation-workspace__error">{error}</p>}
         {savedMessage && <p className="annotation-workspace__success">{savedMessage}</p>}
