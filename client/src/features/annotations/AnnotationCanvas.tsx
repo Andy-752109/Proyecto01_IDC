@@ -2,6 +2,7 @@ import type Konva from 'konva';
 import { useEffect, useRef, useState } from 'react';
 import { Image as KonvaImage, Layer, Rect, Stage, Transformer } from 'react-konva';
 import type { Annotation, Category, DraftAnnotation } from './types';
+import { MAX_ZOOM, MIN_ZOOM, toWorldPoint, zoomIn, zoomOut } from './zoom';
 
 type AnnotationCanvasProps = {
   imageUrl: string;
@@ -39,10 +40,6 @@ function useHtmlImage(src: string): HTMLImageElement | undefined {
 function colorForCategory(categories: Category[], categoryId: number): string {
   return categories.find((category) => category.id === categoryId)?.color ?? '#999999';
 }
-
-const MIN_ZOOM = 0.25;
-const MAX_ZOOM = 3;
-const ZOOM_STEP = 0.25;
 
 export function AnnotationCanvas({
   imageUrl,
@@ -92,10 +89,10 @@ export function AnnotationCanvas({
       return;
     }
     // getPointerPosition() returns screen pixels within the canvas element,
-    // NOT adjusted for the Stage's own scale — divide by zoom to get back
-    // to "real" image-pixel coordinates (what we draw with and eventually
+    // NOT adjusted for the Stage's own scale — toWorldPoint recovers the
+    // "real" image-pixel coordinate (what we draw with and eventually
     // save), regardless of how zoomed in/out the view currently is.
-    const realPoint = { x: pointer.x / zoom, y: pointer.y / zoom };
+    const realPoint = toWorldPoint(pointer, zoom);
     onSelect(null);
     setDrawStart(realPoint);
     setDrawRect({ x: realPoint.x, y: realPoint.y, width: 0, height: 0 });
@@ -109,7 +106,7 @@ export function AnnotationCanvas({
     if (!pointer) {
       return;
     }
-    const realPoint = { x: pointer.x / zoom, y: pointer.y / zoom };
+    const realPoint = toWorldPoint(pointer, zoom);
     setDrawRect({
       x: Math.min(drawStart.x, realPoint.x),
       y: Math.min(drawStart.y, realPoint.y),
@@ -135,11 +132,11 @@ export function AnnotationCanvas({
   }
 
   function handleZoomIn() {
-    setZoom((current) => Math.min(MAX_ZOOM, Math.round((current + ZOOM_STEP) * 100) / 100));
+    setZoom((current) => zoomIn(current));
   }
 
   function handleZoomOut() {
-    setZoom((current) => Math.max(MIN_ZOOM, Math.round((current - ZOOM_STEP) * 100) / 100));
+    setZoom((current) => zoomOut(current));
   }
 
   function handleZoomReset() {

@@ -2,6 +2,17 @@ import { useCallback, useEffect, useState } from 'react';
 import { imagesListResponseSchema } from './schemas';
 import type { ImageMetadata } from './schemas';
 
+// Pure, exported for testing: finds the index of the next image with
+// status "pending" after fromIndex, or fromIndex itself if there isn't one.
+export function findNextPendingIndex(images: ImageMetadata[], fromIndex: number): number {
+  for (let i = fromIndex + 1; i < images.length; i += 1) {
+    if (images[i]?.status === 'pending') {
+      return i;
+    }
+  }
+  return fromIndex;
+}
+
 type UseCurrentImageResult =
   | { status: 'loading' }
   | { status: 'error'; message: string }
@@ -62,19 +73,7 @@ export function useCurrentImage(): UseCurrentImageResult {
   }, []);
 
   const goToNextPending = useCallback(() => {
-    setIndex((current) => {
-      if (!images) {
-        return current;
-      }
-      for (let i = current + 1; i < images.length; i += 1) {
-        if (images[i]?.status === 'pending') {
-          return i;
-        }
-      }
-      // No pending image after this one — stay put rather than jump
-      // somewhere unexpected. The button disables itself in this case.
-      return current;
-    });
+    setIndex((current) => (images ? findNextPendingIndex(images, current) : current));
   }, [images]);
 
   if (error) {
