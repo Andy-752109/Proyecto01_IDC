@@ -11,15 +11,17 @@ type UseCurrentImageResult =
       image: ImageMetadata;
       hasNext: boolean;
       hasPrevious: boolean;
+      hasNextPending: boolean;
       goToNext: () => void;
       goToPrevious: () => void;
+      goToNextPending: () => void;
     };
 
 // Fetches the full image list once (ordered by createdAt desc, so index 0
 // is the most recent — the same starting point as before navigation
 // existed) and tracks which one is "current" by index. Plain sequential
-// navigation through the list; "next pending image" (save-and-next) is a
-// separate, more specific behavior built on top of this later.
+// navigation ("Anterior"/"Siguiente") vs. jumping to the next PENDING image
+// ("Guardar y siguiente") are both offered, since SPEC-04 needs both.
 export function useCurrentImage(): UseCurrentImageResult {
   const [images, setImages] = useState<ImageMetadata[] | undefined>(undefined);
   const [index, setIndex] = useState(0);
@@ -59,6 +61,22 @@ export function useCurrentImage(): UseCurrentImageResult {
     setIndex((current) => Math.max(0, current - 1));
   }, []);
 
+  const goToNextPending = useCallback(() => {
+    setIndex((current) => {
+      if (!images) {
+        return current;
+      }
+      for (let i = current + 1; i < images.length; i += 1) {
+        if (images[i]?.status === 'pending') {
+          return i;
+        }
+      }
+      // No pending image after this one — stay put rather than jump
+      // somewhere unexpected. The button disables itself in this case.
+      return current;
+    });
+  }, [images]);
+
   if (error) {
     return { status: 'error', message: error };
   }
@@ -78,12 +96,16 @@ export function useCurrentImage(): UseCurrentImageResult {
     return { status: 'empty' };
   }
 
+  const hasNextPending = images.slice(clampedIndex + 1).some((item) => item.status === 'pending');
+
   return {
     status: 'ready',
     image,
     hasNext: clampedIndex < images.length - 1,
     hasPrevious: clampedIndex > 0,
+    hasNextPending,
     goToNext,
     goToPrevious,
+    goToNextPending,
   };
 }
