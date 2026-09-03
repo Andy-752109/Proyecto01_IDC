@@ -1,10 +1,13 @@
+import { AnnotationWorkspace } from './features/annotations/AnnotationWorkspace';
 import { ExportCocoButton } from './features/export/ExportCocoButton';
+import { ImageUploadPanel } from './features/images/ImageUploadPanel';
 
 export function App() {
   return (
     <main>
       <h1>Portal de Anotación de Imágenes</h1>
-      <p>Setup base — pendiente de implementar features sobre este esqueleto.</p>
+      <ImageUploadPanel />
+      <AnnotationWorkspace />
       <ExportCocoButton />
     </main>
   );

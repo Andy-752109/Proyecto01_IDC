@@ -1,13 +1,10 @@
 import assert from 'node:assert/strict';
-import type { Server } from 'node:http';
-import type { AddressInfo } from 'node:net';
-import { After, AfterAll, BeforeAll, Given, Then, When } from '@cucumber/cucumber';
+import { After, Given, Then, When } from '@cucumber/cucumber';
 import { eq, inArray, sql } from 'drizzle-orm';
-import express from 'express';
-import { db, pool } from '../../server/src/db/client';
+import { db } from '../../server/src/db/client';
 import { annotations, categories, images } from '../../server/src/db/schema';
-import { cocoExportRouter } from '../../server/src/export/coco.router';
 import type { CocoDataset } from '../../server/src/export/coco.schema';
+import { baseUrl } from '../support/hooks';
 
 // SPEC-05 (features/coco_export_structure.feature): estructura COCO válida
 // e IDs consistentes entre secciones.
@@ -15,37 +12,12 @@ import type { CocoDataset } from '../../server/src/export/coco.schema';
 // SPEC-07 (features/coco_full_export.feature): exportación descargable del
 // dataset completo, sin excluir nada.
 //
-// Este archivo levanta su propio servidor Express que monta únicamente
-// `cocoExportRouter`, en vez de reusar el harness compartido de
-// features/support/ (creado por T-04/T-05): el endpoint de exportación es
-// de solo lectura sobre MariaDB y no depende de MinIO ni de subida de
-// archivos, así que no necesita ese harness. Cuando ese harness quede
-// establecido en main, este bootstrap se puede reemplazar por su
-// `baseUrl` compartido sin tocar ninguno de los steps de abajo.
+// El servidor HTTP y el pool de MariaDB son compartidos con el resto de la
+// suite (features/support/hooks.ts): este archivo no levanta su propio
+// servidor ni cierra el pool, para no romper los demás escenarios cuando
+// corren juntos en `npm run test:bdd`.
 
 const TEST_CATEGORY_NAME = '__coco-export-test-category';
-
-const app = express();
-app.use('/api/export', cocoExportRouter);
-
-let server: Server;
-let baseUrl = '';
-
-BeforeAll(async () => {
-  server = app.listen(0);
-  await new Promise<void>((resolve) => {
-    server.once('listening', resolve);
-  });
-  const address = server.address() as AddressInfo;
-  baseUrl = `http://localhost:${address.port}`;
-});
-
-AfterAll(async () => {
-  await new Promise<void>((resolve, reject) => {
-    server.close((error) => (error ? reject(error) : resolve()));
-  });
-  await pool.end();
-});
 
 async function getOrCreateTestCategoryId(): Promise<number> {
   await db
@@ -63,7 +35,6 @@ async function getOrCreateTestCategoryId(): Promise<number> {
 
 let imageCounter = 0;
 let createdImageIds: number[] = [];
-let createdAnnotationIds: number[] = [];
 
 async function insertTestImage(width = 640, height = 480): Promise<number> {
   imageCounter += 1;
@@ -96,9 +67,7 @@ async function insertTestAnnotation(
     width: box.width,
     height: box.height,
   });
-  const annotationId = insertResult[0].insertId;
-  createdAnnotationIds.push(annotationId);
-  return annotationId;
+  return insertResult[0].insertId;
 }
 
 // --- Estado compartido entre steps de un mismo escenario ---
@@ -108,14 +77,14 @@ let imageWithoutAnnotationsId: number | undefined;
 let bboxAnnotationId: number | undefined;
 let bboxInput: { x: number; y: number; width: number; height: number } | undefined;
 
+// El After global de features/support/hooks.ts ya vacía la tabla
+// `annotations` completa después de cada escenario. Aquí solo limpiamos las
+// imágenes que creamos nosotros (nadie más lo hace), lo que además cascadea
+// el borrado de cualquier anotación que aún les quedara (onDelete: cascade).
 After(async () => {
-  if (createdAnnotationIds.length > 0) {
-    await db.delete(annotations).where(inArray(annotations.id, createdAnnotationIds));
-  }
   if (createdImageIds.length > 0) {
     await db.delete(images).where(inArray(images.id, createdImageIds));
   }
-  createdAnnotationIds = [];
   createdImageIds = [];
   lastDataset = undefined;
   lastResponse = undefined;
