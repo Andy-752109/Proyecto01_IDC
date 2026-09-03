@@ -28,6 +28,12 @@
   margin: 0;
 }
 
+.annotation-workspace__success {
+  color: #1e7e34;
+  font-size: 14px;
+  margin: 0;
+}
+
 .annotation-workspace__panel {
   border: 1px solid #d0d0d0;
   padding: 12px;

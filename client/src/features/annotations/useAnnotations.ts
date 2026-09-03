@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { annotationSchema } from './schemas';
 import type { Annotation, DraftAnnotation } from './types';
 
 const ANNOTATIONS_ENDPOINT = '/api/annotations';
@@ -12,10 +13,22 @@ type UseAnnotationsResult = {
   error: string | null;
   startDraft: (box: DraftAnnotation) => void;
   cancelDraft: () => void;
-  saveDraft: (categoryId: number) => Promise<void>;
+  saveDraft: (categoryId: number) => Promise<boolean>;
   updateAnnotation: (id: number, changes: AnnotationChanges) => Promise<void>;
   deleteAnnotation: (id: number) => Promise<void>;
 };
+
+// Parses a fetch Response body as JSON and validates it against an
+// annotation schema, instead of trusting the server with a raw cast
+// (Ajuste #2: external responses get validated with Zod).
+async function parseAnnotationResponse(response: Response): Promise<Annotation> {
+  const data: unknown = await response.json();
+  const result = annotationSchema.safeParse(data);
+  if (!result.success) {
+    throw new Error('La respuesta del servidor no tiene el formato esperado.');
+  }
+  return result.data;
+}
 
 // Manages annotations for a single image: the in-memory list, an in-progress
 // "draft" box (drawn but not saved), and the POST/PATCH/DELETE calls to
@@ -37,9 +50,9 @@ export function useAnnotations(imageId: number): UseAnnotationsResult {
   }, []);
 
   const saveDraft = useCallback(
-    async (categoryId: number) => {
+    async (categoryId: number): Promise<boolean> => {
       if (!draft) {
-        return;
+        return false;
       }
       setIsSaving(true);
       setError(null);
@@ -53,13 +66,15 @@ export function useAnnotations(imageId: number): UseAnnotationsResult {
           const body = (await response.json().catch(() => null)) as { error?: string } | null;
           throw new Error(body?.error ?? 'No se pudo guardar la caja.');
         }
-        const created = (await response.json()) as Annotation;
+        const created = await parseAnnotationResponse(response);
         setAnnotations((previous) => [...previous, created]);
         setDraft(null);
+        return true;
       } catch (caughtError) {
         setError(
           caughtError instanceof Error ? caughtError.message : 'Error desconocido al guardar.',
         );
+        return false;
       } finally {
         setIsSaving(false);
       }
@@ -86,7 +101,7 @@ export function useAnnotations(imageId: number): UseAnnotationsResult {
       if (!response.ok) {
         throw new Error('No se pudo actualizar la caja.');
       }
-      const updated = (await response.json()) as Annotation;
+      const updated = await parseAnnotationResponse(response);
       setAnnotations((previous) =>
         previous.map((annotation) => (annotation.id === id ? updated : annotation)),
       );

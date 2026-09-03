@@ -2,27 +2,24 @@ import { useCallback, useEffect, useState } from 'react';
 import './annotations.css';
 import { AnnotationCanvas } from './AnnotationCanvas';
 import { CategoryPicker } from './CategoryPicker';
+import { categoriesSchema } from './schemas';
 import type { Category, DraftAnnotation } from './types';
 import { useAnnotations } from './useAnnotations';
+import { useCurrentImage } from './useCurrentImage';
 
-type AnnotationWorkspaceProps = {
-  imageId: number;
-  imageUrl: string;
-  imageWidth: number;
-  imageHeight: number;
-};
+export function AnnotationWorkspace() {
+  const currentImage = useCurrentImage();
 
-export function AnnotationWorkspace({
-  imageId,
-  imageUrl,
-  imageWidth,
-  imageHeight,
-}: AnnotationWorkspaceProps) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoriesError, setCategoriesError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [pendingCategoryId, setPendingCategoryId] = useState<number | null>(null);
+  const [savedMessage, setSavedMessage] = useState<string | null>(null);
 
+  // imageId only really exists once currentImage is 'ready' — useAnnotations
+  // still needs a stable number, so we fall back to 0 (never actually used:
+  // the canvas and its POST/PATCH/DELETE calls only render once ready).
+  const imageId = currentImage.status === 'ready' ? currentImage.image.id : 0;
   const {
     annotations,
     draft,
@@ -38,15 +35,18 @@ export function AnnotationWorkspace({
   useEffect(() => {
     let cancelled = false;
     fetch('/api/categories')
-      .then((response) => {
+      .then(async (response) => {
         if (!response.ok) {
           throw new Error('No se pudieron cargar las categorías.');
         }
-        return response.json() as Promise<Category[]>;
-      })
-      .then((data) => {
+        const data: unknown = await response.json();
+        // Ajuste #2: validar con Zod en vez de confiar en un cast directo.
+        const result = categoriesSchema.safeParse(data);
+        if (!result.success) {
+          throw new Error('La respuesta de categorías no tiene el formato esperado.');
+        }
         if (!cancelled) {
-          setCategories(data);
+          setCategories(result.data);
         }
       })
       .catch((caughtError: unknown) => {
@@ -62,7 +62,7 @@ export function AnnotationWorkspace({
   }, []);
 
   // Delete/Backspace removes the selected box, unless the person is typing
-  // somewhere else on the page (e.g. a future search box).
+  // somewhere else on the page (e.g. the upload panel's filename field).
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key !== 'Delete' && event.key !== 'Backspace') {
@@ -87,6 +87,7 @@ export function AnnotationWorkspace({
       startDraft(box);
       setPendingCategoryId(null);
       setSelectedId(null);
+      setSavedMessage(null);
     },
     [startDraft],
   );
@@ -95,8 +96,12 @@ export function AnnotationWorkspace({
     if (pendingCategoryId === null) {
       return;
     }
-    await saveDraft(pendingCategoryId);
+    const succeeded = await saveDraft(pendingCategoryId);
     setPendingCategoryId(null);
+    if (succeeded) {
+      setSavedMessage('Caja guardada.');
+      window.setTimeout(() => setSavedMessage(null), 2500);
+    }
   }
 
   function handleDeleteSelected() {
@@ -107,12 +112,30 @@ export function AnnotationWorkspace({
     setSelectedId(null);
   }
 
+  if (currentImage.status === 'loading') {
+    return <p className="annotation-workspace__hint">Cargando imagen…</p>;
+  }
+
+  if (currentImage.status === 'error') {
+    return <p className="annotation-workspace__error">{currentImage.message}</p>;
+  }
+
+  if (currentImage.status === 'empty') {
+    return (
+      <p className="annotation-workspace__hint">
+        No hay imágenes cargadas todavía. Sube una para empezar a anotar.
+      </p>
+    );
+  }
+
+  const { image } = currentImage;
+
   return (
     <div className="annotation-workspace">
       <AnnotationCanvas
-        imageUrl={imageUrl}
-        imageWidth={imageWidth}
-        imageHeight={imageHeight}
+        imageUrl={image.url}
+        imageWidth={image.width}
+        imageHeight={image.height}
         annotations={annotations}
         categories={categories}
         draft={draft}
@@ -125,6 +148,7 @@ export function AnnotationWorkspace({
       <aside className="annotation-workspace__sidebar">
         {categoriesError && <p className="annotation-workspace__error">{categoriesError}</p>}
         {error && <p className="annotation-workspace__error">{error}</p>}
+        {savedMessage && <p className="annotation-workspace__success">{savedMessage}</p>}
 
         {draft && (
           <div className="annotation-workspace__panel">
