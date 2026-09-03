@@ -8,5 +8,9 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./vitest.setup.ts'],
     include: ['client/src/**/*.test.{ts,tsx}', 'server/src/**/*.test.ts'],
+    // Los tests de server/src/db y server/src/routes son de integración
+    // contra una MariaDB/MinIO reales y compartidas: no pueden correr en
+    // paralelo entre archivos sin pisarse entre sí.
+    fileParallelism: false,
   },
 });

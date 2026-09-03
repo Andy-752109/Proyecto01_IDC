@@ -3,9 +3,10 @@
 module.exports = {
   default: {
     paths: ['features/**/*.feature'],
-    require: ['features/step-definitions/**/*.ts'],
+    require: ['features/step-definitions/**/*.ts', 'features/support/**/*.ts'],
     requireModule: ['tsx/cjs'],
     format: ['progress-bar'],
     publishQuiet: true,
+    tags: 'not @wip',
   },
 };
