@@ -6,7 +6,7 @@ import multer, { MulterError } from 'multer';
 import { z } from 'zod';
 import { env } from '../config/env';
 import { db } from '../db/client';
-import { images } from '../db/schema';
+import { imageStatusValues, images } from '../db/schema';
 import { IMAGES_BUCKET, minioClient } from '../lib/minio';
 
 export const MAX_IMAGE_SIZE_BYTES = env.MAX_UPLOAD_MB * 1024 * 1024;
@@ -41,6 +41,14 @@ function sanitizeFilename(filename: string): string {
 
 const idParamSchema = z.object({
   id: z.coerce.number().int().positive(),
+});
+
+// PATCH /api/images/:id body — status transitions (e.g. "Guardar y
+// siguiente" in T-06 moves pending -> annotated). Reuses the same enum the
+// DB column is constrained to, so an invalid status is rejected before it
+// ever reaches Drizzle.
+const updateImageStatusSchema = z.object({
+  status: z.enum(imageStatusValues),
 });
 
 function serializeImage(row: typeof images.$inferSelect) {
@@ -157,6 +165,44 @@ imagesRouter.get('/:id', async (req, res, next) => {
       return;
     }
     res.status(200).json({ image: serializeImage(row) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// PATCH /api/images/:id — update the image's status. Owned by T-06: this is
+// what "Guardar y siguiente" calls to transition pending -> annotated, so
+// the dashboard's "imágenes anotadas" metric reflects real progress.
+imagesRouter.patch('/:id', async (req, res, next) => {
+  const parsedParams = idParamSchema.safeParse(req.params);
+  if (!parsedParams.success) {
+    res.status(400).json({ error: 'El id de la imagen no es válido' });
+    return;
+  }
+
+  const parsedBody = updateImageStatusSchema.safeParse(req.body);
+  if (!parsedBody.success) {
+    res.status(400).json({ error: 'Invalid status', details: parsedBody.error.flatten() });
+    return;
+  }
+
+  try {
+    const [existing] = await db.select().from(images).where(eq(images.id, parsedParams.data.id));
+    if (!existing) {
+      res.status(404).json({ error: 'Imagen no encontrada' });
+      return;
+    }
+
+    await db
+      .update(images)
+      .set({ status: parsedBody.data.status })
+      .where(eq(images.id, parsedParams.data.id));
+
+    const [updated] = await db.select().from(images).where(eq(images.id, parsedParams.data.id));
+    if (!updated) {
+      throw new Error('No se pudo leer el registro actualizado');
+    }
+    res.status(200).json({ image: serializeImage(updated) });
   } catch (error) {
     next(error);
   }

@@ -196,6 +196,22 @@ export function AnnotationWorkspace() {
         return;
       }
     }
+    // Team decision: "Guardar y siguiente" marks the image
+    // pending -> annotated, so the dashboard's "imágenes anotadas" metric
+    // reflects real progress. Best-effort: if this fails, don't block
+    // navigation — the boxes are already safely saved either way.
+    try {
+      const response = await fetch(`/api/images/${currentImage.image.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'annotated' }),
+      });
+      if (response.ok) {
+        currentImage.markCurrentAsAnnotated();
+      }
+    } catch {
+      // Swallowed on purpose — see comment above.
+    }
     setSelectedId(null);
     setPendingCategoryId(null);
     setSavedMessage(null);

@@ -26,6 +26,7 @@ type UseCurrentImageResult =
       goToNext: () => void;
       goToPrevious: () => void;
       goToNextPending: () => void;
+      markCurrentAsAnnotated: () => void;
     };
 
 // Fetches the full image list once (ordered by createdAt desc, so index 0
@@ -76,6 +77,25 @@ export function useCurrentImage(): UseCurrentImageResult {
     setIndex((current) => (images ? findNextPendingIndex(images, current) : current));
   }, [images]);
 
+  // Called right after a successful PATCH /api/images/:id marks the
+  // current image "annotated" — updates the locally-cached list so
+  // hasNextPending/findNextPendingIndex reflect that immediately, instead
+  // of still treating this image as "pending" until a page refresh.
+  const markCurrentAsAnnotated = useCallback(() => {
+    setImages((previous) => {
+      if (!previous) {
+        return previous;
+      }
+      const currentImage = previous[Math.min(index, previous.length - 1)];
+      if (!currentImage) {
+        return previous;
+      }
+      return previous.map((item) =>
+        item.id === currentImage.id ? { ...item, status: 'annotated' } : item,
+      );
+    });
+  }, [index]);
+
   if (error) {
     return { status: 'error', message: error };
   }
@@ -106,5 +126,6 @@ export function useCurrentImage(): UseCurrentImageResult {
     goToNext,
     goToPrevious,
     goToNextPending,
+    markCurrentAsAnnotated,
   };
 }
