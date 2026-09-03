@@ -7,6 +7,8 @@ import type { Category, DraftAnnotation } from './types';
 import { useAnnotations } from './useAnnotations';
 import { useCurrentImage } from './useCurrentImage';
 
+type PendingNavigation = 'next' | 'previous' | null;
+
 export function AnnotationWorkspace() {
   const currentImage = useCurrentImage();
 
@@ -15,6 +17,11 @@ export function AnnotationWorkspace() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [pendingCategoryId, setPendingCategoryId] = useState<number | null>(null);
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
+  // Set when the person tries to navigate away while a draft box (drawn but
+  // not saved) exists — SPEC-04's "unsaved changes" scenarios. Holds which
+  // direction they were trying to go, so we can complete it after they
+  // choose to save or discard.
+  const [pendingNavigation, setPendingNavigation] = useState<PendingNavigation>(null);
 
   // imageId only really exists once currentImage is 'ready' — useAnnotations
   // still needs a stable number, so we fall back to 0 (never actually used:
@@ -63,11 +70,6 @@ export function AnnotationWorkspace() {
       cancelled = true;
     };
   }, []);
-
-  // Navigating to a different image clears selection/draft/save-message
-  // state — handled directly in handleNavigate() below, right before
-  // switching images, so there's no stale selection pointing at a box from
-  // the image we just left.
 
   // Delete/Backspace removes the selected box; Ctrl+Z / Cmd+Z undoes the
   // last action — unless the person is typing somewhere else on the page.
@@ -125,18 +127,57 @@ export function AnnotationWorkspace() {
     setSelectedId(null);
   }
 
-  function handleNavigate(direction: 'next' | 'previous') {
+  // Actually switches images and clears per-image local state. Only called
+  // once we're sure there's nothing unsaved left behind (or the person
+  // explicitly chose to discard it).
+  function completeNavigation(direction: 'next' | 'previous') {
     if (currentImage.status !== 'ready') {
       return;
     }
     setSelectedId(null);
     setPendingCategoryId(null);
     setSavedMessage(null);
+    setPendingNavigation(null);
     if (direction === 'next') {
       currentImage.goToNext();
     } else {
       currentImage.goToPrevious();
     }
+  }
+
+  function handleNavigate(direction: 'next' | 'previous') {
+    if (currentImage.status !== 'ready') {
+      return;
+    }
+    // SPEC-04: navigating away with an unsaved draft box prompts first,
+    // instead of silently discarding it.
+    if (draft) {
+      setPendingNavigation(direction);
+      return;
+    }
+    completeNavigation(direction);
+  }
+
+  async function handleConfirmSaveAndNavigate() {
+    if (pendingCategoryId === null || !pendingNavigation) {
+      return;
+    }
+    const succeeded = await saveDraft(pendingCategoryId);
+    if (succeeded) {
+      completeNavigation(pendingNavigation);
+    }
+  }
+
+  function handleDiscardAndNavigate() {
+    if (!pendingNavigation) {
+      return;
+    }
+    cancelDraft();
+    completeNavigation(pendingNavigation);
+  }
+
+  function handleCancelNavigation() {
+    setPendingNavigation(null);
   }
 
   if (currentImage.status === 'loading') {
@@ -201,7 +242,26 @@ export function AnnotationWorkspace() {
         {error && <p className="annotation-workspace__error">{error}</p>}
         {savedMessage && <p className="annotation-workspace__success">{savedMessage}</p>}
 
-        {draft && (
+        {pendingNavigation && (
+          <div className="annotation-workspace__panel annotation-workspace__panel--warning">
+            <p>Tienes una caja sin guardar. ¿Qué quieres hacer antes de cambiar de imagen?</p>
+            <div className="annotation-workspace__actions">
+              {pendingCategoryId !== null && (
+                <button type="button" onClick={handleConfirmSaveAndNavigate} disabled={isSaving}>
+                  {isSaving ? 'Guardando…' : 'Guardar y continuar'}
+                </button>
+              )}
+              <button type="button" onClick={handleDiscardAndNavigate} disabled={isSaving}>
+                Descartar y continuar
+              </button>
+              <button type="button" onClick={handleCancelNavigation} disabled={isSaving}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
+
+        {draft && !pendingNavigation && (
           <div className="annotation-workspace__panel">
             <p>Nueva caja dibujada. Asigná una clase válida para guardarla.</p>
             <CategoryPicker
@@ -235,7 +295,7 @@ export function AnnotationWorkspace() {
           </div>
         )}
 
-        {!draft && selectedId === null && (
+        {!draft && selectedId === null && !pendingNavigation && (
           <p className="annotation-workspace__hint">
             Dibuja una caja sobre la imagen para empezar a anotar.
           </p>

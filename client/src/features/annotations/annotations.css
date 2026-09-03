@@ -124,6 +124,11 @@
   gap: 10px;
 }
 
+.annotation-workspace__panel--warning {
+  border-color: #b3261e;
+  background: #fdf1f0;
+}
+
 .annotation-workspace__panel p {
   margin: 0;
   font-size: 14px;
