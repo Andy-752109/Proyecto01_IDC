@@ -21,6 +21,7 @@ Feature: Canvas navigation and annotation tools
     Given I have annotated all necessary boxes on the current image
     When I press "Save and next"
     Then the annotations are saved to the database
+    And the current image is marked as annotated
     And the next pending image is displayed
 
   Scenario: Navigate between images without losing changes

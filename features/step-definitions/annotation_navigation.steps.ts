@@ -16,9 +16,9 @@
 import assert from 'node:assert/strict';
 import { Given, Then, When } from '@cucumber/cucumber';
 import { eq } from 'drizzle-orm';
-import type { ImageMetadata } from '../../client/src/features/annotations/schemas';
-import { findNextPendingIndex } from '../../client/src/features/annotations/useCurrentImage';
 import { toWorldPoint, zoomIn } from '../../client/src/features/annotations/zoom';
+import { findNextPendingIndex } from '../../client/src/features/annotations/useCurrentImage';
+import type { ImageMetadata } from '../../client/src/features/annotations/schemas';
 import { db } from '../../server/src/db/client';
 import { annotations } from '../../server/src/db/schema';
 import { baseUrl } from '../support/hooks';
@@ -53,10 +53,7 @@ Then('existing boxes keep their correct relative position', () => {
   // toWorldPoint() — it must match the original, proving boxes don't drift
   // out of alignment with the image when zooming.
   const worldPoint = { x: 120, y: 80 };
-  const screenAtNewZoom = {
-    x: worldPoint.x * testState.zoomAfter,
-    y: worldPoint.y * testState.zoomAfter,
-  };
+  const screenAtNewZoom = { x: worldPoint.x * testState.zoomAfter, y: worldPoint.y * testState.zoomAfter };
   const roundTripped = toWorldPoint(screenAtNewZoom, testState.zoomAfter);
   assert.equal(Math.round(roundTripped.x), worldPoint.x);
   assert.equal(Math.round(roundTripped.y), worldPoint.y);
@@ -82,12 +79,9 @@ When('I press undo', async () => {
   }
   // Undoing a "create" action deletes the box — mirrors exactly what
   // useAnnotations().undo() does for the 'create' case on the frontend.
-  testState.lastResponse = await fetch(
-    `${baseUrl}/api/annotations/${testState.lastAnnotation.id}`,
-    {
-      method: 'DELETE',
-    },
-  );
+  testState.lastResponse = await fetch(`${baseUrl}/api/annotations/${testState.lastAnnotation.id}`, {
+    method: 'DELETE',
+  });
 });
 
 Then('the created box disappears from the canvas', () => {
@@ -124,16 +118,33 @@ When('I press {string}', async (buttonLabel: string) => {
   if (buttonLabel !== 'Save and next') {
     throw new Error(`Unexpected button label: ${buttonLabel}`);
   }
+  if (testState.currentImageId === undefined) {
+    throw new Error('No current image set');
+  }
+  // Mirrors handleSaveAndNext(): mark the current image as annotated
+  // before looking for the next pending one.
+  await fetch(`${baseUrl}/api/images/${testState.currentImageId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: 'annotated' }),
+  });
   // The box from the Given step is already saved. "Save and next" then
   // looks at the fetched image list and jumps to the next pending one —
   // the same findNextPendingIndex() the frontend uses.
   const response = await fetch(`${baseUrl}/api/images`);
   const body = (await response.json()) as { images: ImageMetadata[] };
   testState.imagesList = body.images;
-  const currentIndex = testState.imagesList.findIndex(
-    (image) => image.id === testState.currentImageId,
-  );
+  const currentIndex = testState.imagesList.findIndex((image) => image.id === testState.currentImageId);
   testState.nextPendingIndex = findNextPendingIndex(testState.imagesList, currentIndex);
+});
+
+Then('the current image is marked as annotated', async () => {
+  if (testState.currentImageId === undefined) {
+    throw new Error('No current image to check');
+  }
+  const response = await fetch(`${baseUrl}/api/images/${testState.currentImageId}`);
+  const body = (await response.json()) as { image?: { status: string } };
+  assert.equal(body.image?.status, 'annotated');
 });
 
 Then('the annotations are saved to the database', async () => {
@@ -152,14 +163,8 @@ Then('the next pending image is displayed', () => {
   if (!testState.imagesList || testState.nextPendingIndex === undefined) {
     throw new Error('Missing navigation state — did the "Save and next" step run?');
   }
-  const currentIndex = testState.imagesList.findIndex(
-    (image) => image.id === testState.currentImageId,
-  );
-  assert.notEqual(
-    testState.nextPendingIndex,
-    currentIndex,
-    'Expected navigation to move to a different image',
-  );
+  const currentIndex = testState.imagesList.findIndex((image) => image.id === testState.currentImageId);
+  assert.notEqual(testState.nextPendingIndex, currentIndex, 'Expected navigation to move to a different image');
   const target = testState.imagesList[testState.nextPendingIndex];
   assert.ok(target);
   assert.equal(target.status, 'pending');
@@ -182,11 +187,7 @@ When('I navigate to the previous image', () => {
 });
 
 Then('I am prompted to confirm whether I want to save the changes', () => {
-  assert.notEqual(
-    testState.drawnCoordinates,
-    undefined,
-    'Expected an unsaved draft to trigger a confirmation prompt',
-  );
+  assert.notEqual(testState.drawnCoordinates, undefined, 'Expected an unsaved draft to trigger a confirmation prompt');
 });
 
 When('I confirm that I want to save the changes', async () => {
@@ -197,11 +198,7 @@ When('I confirm that I want to save the changes', async () => {
   testState.lastResponse = await fetch(`${baseUrl}/api/annotations`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      imageId: testState.currentImageId,
-      categoryId,
-      ...testState.drawnCoordinates,
-    }),
+    body: JSON.stringify({ imageId: testState.currentImageId, categoryId, ...testState.drawnCoordinates }),
   });
   testState.lastAnnotation = (await testState.lastResponse.json()) as AnnotationRecord;
   // Saving resolves the draft — matches the real app clearing `draft` to
@@ -224,11 +221,7 @@ Then('the changes are saved to the database', async () => {
 Then('I am taken to the previous image', () => {
   // True after either resolving the draft by saving it, or by discarding
   // it — in both cases there's nothing left blocking navigation.
-  assert.equal(
-    testState.drawnCoordinates,
-    undefined,
-    'Expected no unsaved draft remaining before navigating',
-  );
+  assert.equal(testState.drawnCoordinates, undefined, 'Expected no unsaved draft remaining before navigating');
 });
 
 When('I choose to discard the changes', () => {
