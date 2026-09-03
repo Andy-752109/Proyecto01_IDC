@@ -6,6 +6,7 @@ import { annotations, categories } from '../../server/src/db/schema';
 import { baseUrl } from '../support/hooks';
 import { getAnySeededImageId, getCategoryIdByName } from '../support/testData';
 import { testState } from '../support/testState';
+import type { AnnotationRecord } from '../support/testState';
 
 Given('I have an image loaded on the annotation canvas', async () => {
   testState.currentImageId = await getAnySeededImageId();
@@ -89,7 +90,7 @@ Given(
         height: 50,
       }),
     });
-    testState.lastAnnotation = await response.json();
+    testState.lastAnnotation = (await response.json()) as AnnotationRecord;
   },
 );
 
@@ -106,7 +107,7 @@ When(/^I drag the box to position \((\d+), (\d+)\)$/, async (x: string, y: strin
     },
   );
   if (testState.lastResponse.ok) {
-    testState.lastAnnotation = await testState.lastResponse.json();
+    testState.lastAnnotation = (await testState.lastResponse.json()) as AnnotationRecord;
   }
 });
 
@@ -140,7 +141,7 @@ Given('a box with width {int} and height {int} exists', async (width: number, he
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ imageId, categoryId, x: 0, y: 0, width, height }),
   });
-  testState.lastAnnotation = await response.json();
+  testState.lastAnnotation = (await response.json()) as AnnotationRecord;
 });
 
 When('I drag the bottom-right corner of the box to a new point', async () => {
@@ -158,7 +159,7 @@ When('I drag the bottom-right corner of the box to a new point', async () => {
     },
   );
   if (testState.lastResponse.ok) {
-    testState.lastAnnotation = await testState.lastResponse.json();
+    testState.lastAnnotation = (await testState.lastResponse.json()) as AnnotationRecord;
   }
 });
 
@@ -175,7 +176,7 @@ Given('a box with category {string} exists', async (categoryName: string) => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ imageId, categoryId, x: 0, y: 0, width: 50, height: 50 }),
   });
-  testState.lastAnnotation = await response.json();
+  testState.lastAnnotation = (await response.json()) as AnnotationRecord;
 });
 
 When('I delete the box', async () => {
