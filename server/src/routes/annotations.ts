@@ -2,7 +2,11 @@ import { eq } from 'drizzle-orm';
 import { Router } from 'express';
 import { db } from '../db/client';
 import { annotations, categories, images } from '../db/schema';
-import { createAnnotationSchema, updateAnnotationSchema } from '../schemas/annotation';
+import {
+  createAnnotationSchema,
+  listAnnotationsQuerySchema,
+  updateAnnotationSchema,
+} from '../schemas/annotation';
 
 export const annotationsRouter = Router();
 
@@ -10,6 +14,30 @@ function parseId(rawId: string): number | null {
   const id = Number(rawId);
   return Number.isInteger(id) && id > 0 ? id : null;
 }
+
+// GET /api/annotations?imageId=... — list annotations for one image.
+// This is what lets the canvas reload existing boxes when the page is
+// refreshed (SPEC-02's @wip scenario, deferred from T-05 to T-06).
+annotationsRouter.get('/', async (req, res, next) => {
+  const parseResult = listAnnotationsQuerySchema.safeParse(req.query);
+  if (!parseResult.success) {
+    res.status(400).json({
+      error: 'imageId query param is required and must be a positive integer',
+      details: parseResult.error.flatten(),
+    });
+    return;
+  }
+
+  try {
+    const rows = await db
+      .select()
+      .from(annotations)
+      .where(eq(annotations.imageId, parseResult.data.imageId));
+    res.status(200).json(rows);
+  } catch (error) {
+    next(error);
+  }
+});
 
 // POST /api/annotations — create a box with a category (SPEC-02 create, SPEC-03 validation).
 annotationsRouter.post('/', async (req, res, next) => {

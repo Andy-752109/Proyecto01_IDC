@@ -2,6 +2,7 @@ import type Konva from 'konva';
 import { useEffect, useRef, useState } from 'react';
 import { Image as KonvaImage, Layer, Rect, Stage, Transformer } from 'react-konva';
 import type { Annotation, Category, DraftAnnotation } from './types';
+import { MAX_ZOOM, MIN_ZOOM, toWorldPoint, zoomIn, zoomOut } from './zoom';
 
 type AnnotationCanvasProps = {
   imageUrl: string;
@@ -57,6 +58,7 @@ export function AnnotationCanvas({
   const shapeRefs = useRef<Map<number, Konva.Rect>>(new Map());
   const [drawStart, setDrawStart] = useState<{ x: number; y: number } | null>(null);
   const [drawRect, setDrawRect] = useState<DraftAnnotation | null>(null);
+  const [zoom, setZoom] = useState(1);
 
   // Keep the Transformer attached to whichever shape is currently selected.
   useEffect(() => {
@@ -86,9 +88,14 @@ export function AnnotationCanvas({
     if (!pointer) {
       return;
     }
+    // getPointerPosition() returns screen pixels within the canvas element,
+    // NOT adjusted for the Stage's own scale — toWorldPoint recovers the
+    // "real" image-pixel coordinate (what we draw with and eventually
+    // save), regardless of how zoomed in/out the view currently is.
+    const realPoint = toWorldPoint(pointer, zoom);
     onSelect(null);
-    setDrawStart(pointer);
-    setDrawRect({ x: pointer.x, y: pointer.y, width: 0, height: 0 });
+    setDrawStart(realPoint);
+    setDrawRect({ x: realPoint.x, y: realPoint.y, width: 0, height: 0 });
   }
 
   function handleStageMouseMove(event: Konva.KonvaEventObject<MouseEvent>) {
@@ -99,11 +106,12 @@ export function AnnotationCanvas({
     if (!pointer) {
       return;
     }
+    const realPoint = toWorldPoint(pointer, zoom);
     setDrawRect({
-      x: Math.min(drawStart.x, pointer.x),
-      y: Math.min(drawStart.y, pointer.y),
-      width: Math.abs(pointer.x - drawStart.x),
-      height: Math.abs(pointer.y - drawStart.y),
+      x: Math.min(drawStart.x, realPoint.x),
+      y: Math.min(drawStart.y, realPoint.y),
+      width: Math.abs(realPoint.x - drawStart.x),
+      height: Math.abs(realPoint.y - drawStart.y),
     });
   }
 
@@ -123,98 +131,141 @@ export function AnnotationCanvas({
     setDrawRect(null);
   }
 
+  function handleZoomIn() {
+    setZoom((current) => zoomIn(current));
+  }
+
+  function handleZoomOut() {
+    setZoom((current) => zoomOut(current));
+  }
+
+  function handleZoomReset() {
+    setZoom(1);
+  }
+
   return (
-    <Stage
-      width={imageWidth}
-      height={imageHeight}
-      className="annotation-canvas__stage"
-      onMouseDown={handleStageMouseDown}
-      onMouseMove={handleStageMouseMove}
-      onMouseUp={handleStageMouseUp}
-    >
-      <Layer>
-        {image && (
-          <KonvaImage image={image} width={imageWidth} height={imageHeight} listening={false} />
-        )}
+    <div className="annotation-canvas__wrapper">
+      <div className="annotation-canvas__toolbar">
+        <button
+          type="button"
+          onClick={handleZoomOut}
+          disabled={zoom <= MIN_ZOOM}
+          aria-label="Alejar"
+        >
+          −
+        </button>
+        <span className="annotation-canvas__zoom-level">{Math.round(zoom * 100)}%</span>
+        <button
+          type="button"
+          onClick={handleZoomIn}
+          disabled={zoom >= MAX_ZOOM}
+          aria-label="Acercar"
+        >
+          +
+        </button>
+        <button type="button" onClick={handleZoomReset} disabled={zoom === 1}>
+          Restablecer
+        </button>
+      </div>
 
-        {annotations.map((annotation) => (
-          <Rect
-            key={annotation.id}
-            ref={(node: Konva.Rect | null) => {
-              if (node) {
-                shapeRefs.current.set(annotation.id, node);
-              } else {
-                shapeRefs.current.delete(annotation.id);
+      <div className="annotation-canvas__scroll">
+        <Stage
+          width={imageWidth * zoom}
+          height={imageHeight * zoom}
+          scaleX={zoom}
+          scaleY={zoom}
+          className="annotation-canvas__stage"
+          onMouseDown={handleStageMouseDown}
+          onMouseMove={handleStageMouseMove}
+          onMouseUp={handleStageMouseUp}
+        >
+          <Layer>
+            {image && (
+              <KonvaImage image={image} width={imageWidth} height={imageHeight} listening={false} />
+            )}
+
+            {annotations.map((annotation) => (
+              <Rect
+                key={annotation.id}
+                ref={(node: Konva.Rect | null) => {
+                  if (node) {
+                    shapeRefs.current.set(annotation.id, node);
+                  } else {
+                    shapeRefs.current.delete(annotation.id);
+                  }
+                }}
+                x={annotation.x}
+                y={annotation.y}
+                width={annotation.width}
+                height={annotation.height}
+                stroke={colorForCategory(categories, annotation.categoryId)}
+                strokeWidth={2 / zoom}
+                fill="transparent"
+                draggable
+                onClick={() => onSelect(annotation.id)}
+                onTap={() => onSelect(annotation.id)}
+                onDragEnd={(event) => {
+                  onChange(annotation.id, {
+                    x: Math.round(event.target.x()),
+                    y: Math.round(event.target.y()),
+                  });
+                }}
+                onTransformEnd={(event) => {
+                  const node = event.target;
+                  const scaleX = node.scaleX();
+                  const scaleY = node.scaleY();
+                  // Konva resizes by scaling the node rather than changing
+                  // width/height directly — convert that scale back into real
+                  // pixel dimensions and reset it to 1, so the next resize
+                  // starts from accurate values instead of compounding scales.
+                  node.scaleX(1);
+                  node.scaleY(1);
+                  onChange(annotation.id, {
+                    x: Math.round(node.x()),
+                    y: Math.round(node.y()),
+                    width: Math.round(Math.max(5, node.width() * scaleX)),
+                    height: Math.round(Math.max(5, node.height() * scaleY)),
+                  });
+                }}
+              />
+            ))}
+
+            {draft && (
+              <Rect
+                x={draft.x}
+                y={draft.y}
+                width={draft.width}
+                height={draft.height}
+                stroke="#888888"
+                strokeWidth={1 / zoom}
+                dash={[6 / zoom, 4 / zoom]}
+                fill="transparent"
+              />
+            )}
+
+            {drawRect && (
+              <Rect
+                x={drawRect.x}
+                y={drawRect.y}
+                width={drawRect.width}
+                height={drawRect.height}
+                stroke="#888888"
+                strokeWidth={1 / zoom}
+                dash={[4 / zoom, 4 / zoom]}
+                fill="transparent"
+              />
+            )}
+
+            <Transformer
+              ref={transformerRef}
+              rotateEnabled={false}
+              boundBoxFunc={(oldBox, newBox) =>
+                newBox.width < 5 || newBox.height < 5 ? oldBox : newBox
               }
-            }}
-            x={annotation.x}
-            y={annotation.y}
-            width={annotation.width}
-            height={annotation.height}
-            stroke={colorForCategory(categories, annotation.categoryId)}
-            strokeWidth={2}
-            fill="transparent"
-            draggable
-            onClick={() => onSelect(annotation.id)}
-            onTap={() => onSelect(annotation.id)}
-            onDragEnd={(event) => {
-              onChange(annotation.id, {
-                x: Math.round(event.target.x()),
-                y: Math.round(event.target.y()),
-              });
-            }}
-            onTransformEnd={(event) => {
-              const node = event.target;
-              const scaleX = node.scaleX();
-              const scaleY = node.scaleY();
-              // Konva resizes by scaling the node rather than changing
-              // width/height directly — convert that scale back into real
-              // pixel dimensions and reset it to 1, so the next resize
-              // starts from accurate values instead of compounding scales.
-              node.scaleX(1);
-              node.scaleY(1);
-              onChange(annotation.id, {
-                x: Math.round(node.x()),
-                y: Math.round(node.y()),
-                width: Math.round(Math.max(5, node.width() * scaleX)),
-                height: Math.round(Math.max(5, node.height() * scaleY)),
-              });
-            }}
-          />
-        ))}
-
-        {draft && (
-          <Rect
-            x={draft.x}
-            y={draft.y}
-            width={draft.width}
-            height={draft.height}
-            stroke="#888888"
-            dash={[6, 4]}
-            fill="transparent"
-          />
-        )}
-
-        {drawRect && (
-          <Rect
-            x={drawRect.x}
-            y={drawRect.y}
-            width={drawRect.width}
-            height={drawRect.height}
-            stroke="#888888"
-            dash={[4, 4]}
-            fill="transparent"
-          />
-        )}
-
-        <Transformer
-          ref={transformerRef}
-          rotateEnabled={false}
-          boundBoxFunc={(oldBox, newBox) =>
-            newBox.width < 5 || newBox.height < 5 ? oldBox : newBox
-          }
-        />
-      </Layer>
-    </Stage>
+            />
+          </Layer>
+        </Stage>
+      </div>
+    </div>
   );
 }
