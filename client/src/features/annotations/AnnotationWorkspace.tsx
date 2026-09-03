@@ -26,11 +26,13 @@ export function AnnotationWorkspace() {
     isSaving,
     isLoadingAnnotations,
     error,
+    canUndo,
     startDraft,
     cancelDraft,
     saveDraft,
     updateAnnotation,
     deleteAnnotation,
+    undo,
   } = useAnnotations(imageId);
 
   useEffect(() => {
@@ -62,26 +64,31 @@ export function AnnotationWorkspace() {
     };
   }, []);
 
-  // Delete/Backspace removes the selected box, unless the person is typing
-  // somewhere else on the page (e.g. the upload panel's filename field).
+  // Delete/Backspace removes the selected box; Ctrl+Z / Cmd+Z undoes the
+  // last action — unless the person is typing somewhere else on the page.
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key !== 'Delete' && event.key !== 'Backspace') {
-        return;
-      }
-      if (selectedId === null) {
-        return;
-      }
       const target = event.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+      const isTyping = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
+
+      if (
+        (event.key === 'Delete' || event.key === 'Backspace') &&
+        selectedId !== null &&
+        !isTyping
+      ) {
+        deleteAnnotation(selectedId);
+        setSelectedId(null);
         return;
       }
-      deleteAnnotation(selectedId);
-      setSelectedId(null);
+
+      if (event.key === 'z' && (event.ctrlKey || event.metaKey) && !isTyping) {
+        event.preventDefault();
+        undo();
+      }
     }
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedId, deleteAnnotation]);
+  }, [selectedId, deleteAnnotation, undo]);
 
   const handleDrawEnd = useCallback(
     (box: DraftAnnotation) => {
@@ -147,6 +154,15 @@ export function AnnotationWorkspace() {
       />
 
       <aside className="annotation-workspace__sidebar">
+        <button
+          type="button"
+          className="annotation-workspace__undo"
+          onClick={() => undo()}
+          disabled={!canUndo}
+        >
+          Deshacer (Ctrl+Z)
+        </button>
+
         {isLoadingAnnotations && (
           <p className="annotation-workspace__hint">Cargando anotaciones existentes…</p>
         )}

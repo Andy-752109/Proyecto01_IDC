@@ -58,9 +58,19 @@
   gap: 12px;
 }
 
-.annotation-workspace__hint {
-  color: #666666;
+.annotation-workspace__undo {
+  align-self: flex-start;
+  padding: 6px 12px;
+  border: 1px solid #333333;
+  background: #ffffff;
+  cursor: pointer;
   font-size: 14px;
+}
+
+.annotation-workspace__undo:disabled {
+  border-color: #cccccc;
+  color: #999999;
+  cursor: not-allowed;
 }
 
 .annotation-workspace__error {
