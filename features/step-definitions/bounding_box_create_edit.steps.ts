@@ -209,3 +209,41 @@ Then('the annotation record is removed from the database', async () => {
     .limit(1);
   assert.equal(stored, undefined);
 });
+
+// --- SPEC-02 (reload): T-06 ---
+
+Given('I have created and saved a box with category {string}', async (categoryName: string) => {
+  const categoryId = await getCategoryIdByName(categoryName);
+  const imageId = await getAnySeededImageId();
+  testState.currentImageId = imageId;
+  const response = await fetch(`${baseUrl}/api/annotations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ imageId, categoryId, x: 30, y: 40, width: 60, height: 70 }),
+  });
+  testState.lastAnnotation = (await response.json()) as AnnotationRecord;
+});
+
+When('I reload the annotation page', async () => {
+  if (testState.currentImageId === undefined) {
+    throw new Error('No current image to reload annotations for');
+  }
+  // "Reloading the page" for a backend-level scenario means re-fetching
+  // whatever's persisted, the same call the frontend makes on mount/refresh.
+  const response = await fetch(`${baseUrl}/api/annotations?imageId=${testState.currentImageId}`);
+  testState.lastAnnotationsList = (await response.json()) as AnnotationRecord[];
+});
+
+Then('the saved box is displayed at its original position and size', () => {
+  if (!testState.lastAnnotation || !testState.lastAnnotationsList) {
+    throw new Error('Missing saved annotation or reloaded list to compare against');
+  }
+  const reloaded = testState.lastAnnotationsList.find(
+    (item) => item.id === testState.lastAnnotation?.id,
+  );
+  assert.ok(reloaded, 'Saved box was not found after reloading');
+  assert.equal(reloaded.x, testState.lastAnnotation.x);
+  assert.equal(reloaded.y, testState.lastAnnotation.y);
+  assert.equal(reloaded.width, testState.lastAnnotation.width);
+  assert.equal(reloaded.height, testState.lastAnnotation.height);
+});

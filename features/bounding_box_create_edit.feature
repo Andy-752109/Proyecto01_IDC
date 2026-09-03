@@ -33,8 +33,6 @@ Feature: Bounding box create, move, resize and delete
     Then the box no longer appears on the canvas
     And the annotation record is removed from the database
 
-  @wip
-  # Deferred to T-06: requires GET /api/annotations?imageId=, out of scope for T-05.
   Scenario: Annotations persist after reloading the image
     Given I have created and saved a box with category "person"
     When I reload the annotation page

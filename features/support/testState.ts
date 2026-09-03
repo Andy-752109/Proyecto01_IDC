@@ -23,12 +23,14 @@ export const testState: {
   lastResponse: Response | undefined;
   lastResponseBody: unknown;
   lastAnnotation: AnnotationRecord | undefined;
+  lastAnnotationsList: AnnotationRecord[] | undefined;
 } = {
   currentImageId: undefined,
   drawnCoordinates: undefined,
   lastResponse: undefined,
   lastResponseBody: undefined,
   lastAnnotation: undefined,
+  lastAnnotationsList: undefined,
 };
 
 export function resetTestState(): void {
@@ -37,4 +39,5 @@ export function resetTestState(): void {
   testState.lastResponse = undefined;
   testState.lastResponseBody = undefined;
   testState.lastAnnotation = undefined;
+  testState.lastAnnotationsList = undefined;
 }
