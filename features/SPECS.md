@@ -29,6 +29,7 @@ haya ambigüedad entre lo documentado y lo que hay en el repo.
 | SPEC-07 | El dataset completo se puede descargar como archivo, sin excluir nada (2 pts) — separado de SPEC-06 porque en la rúbrica es un sub-punto distinto | 6. Salida COCO | `coco_full_export.feature` | T-09 |
 | SPEC-08 | La búsqueda soporta el operador AND entre categorías | 5. Dashboard y búsqueda | `search_operators.feature` | T-08 (Esteban) |
 | SPEC-09 | Los filtros por clase, estado y rango de fechas son combinables y los resultados se paginan correctamente | 5. Dashboard y búsqueda | `filters_and_pagination.feature` | T-08 (Esteban) |
+| SPEC-10 | Las métricas del dashboard se calculan desde la BD; ninguna es un valor fijo | 5. Dashboard y búsqueda | `dashboard_metrics.feature` | T-07 (JuanPa) |
 
 ## División de trabajo confirmada por el PM (T-04/T-05/T-06/T-09)
 
@@ -53,8 +54,9 @@ haya ambigüedad entre lo documentado y lo que hay en el repo.
   categorías, colores y validación de categoría (SPEC-02 salvo reload, SPEC-03).
 - **T-06 (Ale)**: reload/persistencia al recargar + zoom, undo, navegación y guardar/siguiente
   (el escenario `@wip` de SPEC-02, y SPEC-04 completo).
-- **T-07 (JuanPa)**: dashboard + métricas/gráficas. No tiene `.feature` propio en este documento
-  todavía — si se agregan escenarios de negocio para el dashboard, van aquí.
+- **T-07 (JuanPa)**: dashboard de métricas — `/api/dashboard/*`, solo lectura, todo resuelto con
+  `COUNT`/`GROUP BY` en SQL vía Drizzle (nunca trayendo filas para contar en JS). Cubre SPEC-10,
+  con su propio `dashboard_metrics.feature`.
 - **T-08 (Esteban)**: búsqueda + filtros/paginación (SPEC-08, SPEC-09).
 
 ## Nota sobre `annotation_navigation.feature` en el checker de T-05
