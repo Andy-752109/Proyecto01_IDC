@@ -3,7 +3,8 @@ import { AnnotationWorkspace } from './features/annotations/AnnotationWorkspace'
 import { Dashboard } from './features/dashboard/Dashboard';
 import { ExportCocoButton } from './features/export/ExportCocoButton';
 import { ImageUploadPanel } from './features/images/ImageUploadPanel';
-type View = 'images' | 'annotate' | 'dashboard' | 'coco';
+import { ImageSearch } from './features/search/ImageSearch';
+type View = 'images' | 'annotate' | 'dashboard' | 'search' | 'coco';
 
 export function App() {
   const [view, setView] = useState<View>('images');
@@ -21,6 +22,9 @@ export function App() {
         <button type="button" onClick={() => setView('dashboard')} disabled={view === 'dashboard'}>
           Dashboard
         </button>
+        <button type="button" onClick={() => setView('search')} disabled={view === 'search'}>
+          Buscar
+        </button>
         <button type="button" onClick={() => setView('coco')} disabled={view === 'coco'}>
           COCO
         </button>
@@ -28,6 +32,7 @@ export function App() {
       {view === 'images' && <ImageUploadPanel />}
       {view === 'annotate' && <AnnotationWorkspace />}
       {view === 'dashboard' && <Dashboard />}
+      {view === 'search' && <ImageSearch />}
       {view === 'dashboard' && <ExportCocoButton />}
     </main>
   );
