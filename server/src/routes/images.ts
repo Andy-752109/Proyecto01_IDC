@@ -86,14 +86,21 @@ function runUpload(req: Request, res: Response): Promise<void> {
 // + HAVING COUNT DISTINCT), not by fetching everything and filtering in
 // JavaScript: an image only qualifies if it has at least one annotation in
 // EVERY requested category, which is exactly what the HAVING clause checks.
-async function findImageIdsMatchingAllCategories(categoryNames: string[]): Promise<number[]> {
-  const rows = await db
+// Exported (separate from the function that awaits it) so tests can call
+// .toSQL() on the query builder and assert on the generated SQL/params
+// directly, without hitting the database — see images-search.test.ts.
+export function buildCategoryMatchQuery(categoryNames: string[]) {
+  return db
     .select({ imageId: annotations.imageId })
     .from(annotations)
     .innerJoin(categories, eq(categories.id, annotations.categoryId))
     .where(inArray(categories.name, categoryNames))
     .groupBy(annotations.imageId)
     .having(sql`count(distinct ${categories.name}) = ${categoryNames.length}`);
+}
+
+async function findImageIdsMatchingAllCategories(categoryNames: string[]): Promise<number[]> {
+  const rows = await buildCategoryMatchQuery(categoryNames);
   return rows.map((row) => row.imageId);
 }
 

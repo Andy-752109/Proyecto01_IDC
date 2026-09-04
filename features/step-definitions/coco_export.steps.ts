@@ -86,6 +86,13 @@ After(async () => {
     await db.delete(images).where(inArray(images.id, createdImageIds));
   }
   createdImageIds = [];
+  // Borra la categoría de prueba también: como se crea con
+  // onDuplicateKeyUpdate (upsert), si no se limpia queda contaminando la
+  // tabla real de categorías para siempre — aparece en el dashboard, en el
+  // selector de categorías del anotador, y hasta en el JSON exportado.
+  // Ya no quedan anotaciones que la referencien (se borraron en cascada
+  // arriba junto con sus imágenes), así que el delete es seguro.
+  await db.delete(categories).where(eq(categories.name, TEST_CATEGORY_NAME));
   lastDataset = undefined;
   lastResponse = undefined;
   imageWithoutAnnotationsId = undefined;
