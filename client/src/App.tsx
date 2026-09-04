@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import './App.css';
 import { AnnotationWorkspace } from './features/annotations/AnnotationWorkspace';
 import { Dashboard } from './features/dashboard/Dashboard';
 import { ExportCocoButton } from './features/export/ExportCocoButton';
@@ -11,8 +12,8 @@ export function App() {
 
   return (
     <main>
-      <h1>Portal de Anotación de Imágenes</h1>
-      <nav>
+      <h1 className="app-header">Portal de Anotación de Imágenes</h1>
+      <nav className="app-nav">
         <button type="button" onClick={() => setView('images')} disabled={view === 'images'}>
           Imágenes
         </button>
@@ -29,11 +30,19 @@ export function App() {
           COCO
         </button>
       </nav>
-      {view === 'images' && <ImageUploadPanel />}
+      {view === 'images' && (
+        <div className="app-light-island">
+          <ImageUploadPanel />
+        </div>
+      )}
       {view === 'annotate' && <AnnotationWorkspace />}
       {view === 'dashboard' && <Dashboard />}
       {view === 'search' && <ImageSearch />}
-      {view === 'dashboard' && <ExportCocoButton />}
+      {view === 'dashboard' && (
+        <div className="app-light-island">
+          <ExportCocoButton />
+        </div>
+      )}
     </main>
   );
 }

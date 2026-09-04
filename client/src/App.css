@@ -1,0 +1,72 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap");
+
+body {
+  margin: 0;
+  background: #16181c;
+  color: #e7e5e0;
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+}
+
+main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 16px 32px;
+}
+
+/* Tarjeta blanca de "isla" para paneles de otras tareas (Imágenes de T-04,
+   COCO de T-09) que nunca se rediseñaron y asumen texto oscuro sobre fondo
+   claro — sin esto, su texto quedaría invisible sobre el fondo oscuro de la
+   página. No tocamos esos componentes, solo los envolvemos. */
+.app-light-island {
+  background: #ffffff;
+  color: #1a1a1a;
+  padding: 16px;
+  margin-top: 16px;
+  border: 1px solid #2b2f36;
+}
+
+.app-header {
+  background: #16181c;
+  color: #e7e5e0;
+  text-align: center;
+  padding: 20px 16px;
+  margin: 0;
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 28px;
+  letter-spacing: 0.01em;
+}
+
+.app-nav {
+  display: flex;
+  gap: 4px;
+  padding: 8px;
+  background: #16181c;
+  border: 1px solid #2b2f36;
+  border-top: none;
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+}
+
+.app-nav button {
+  padding: 8px 16px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #8b8f98;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  transition: color 120ms ease, background 120ms ease, border-color 120ms ease;
+}
+
+.app-nav button:hover:not(:disabled) {
+  color: #e7e5e0;
+  background: #1c1f24;
+}
+
+.app-nav button:disabled {
+  color: #3fa9f5;
+  background: #1c1f24;
+  border-color: #3fa9f5;
+  cursor: default;
+}
