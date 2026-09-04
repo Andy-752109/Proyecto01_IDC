@@ -17,6 +17,15 @@ export type AnnotationRecord = {
   height: number;
 };
 
+export type SearchResultBody = {
+  images: ImageMetadata[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
+export type FilterFixture = { className: string; status: string; imageId: number };
+
 type DrawnCoordinates = { x: number; y: number; width: number; height: number };
 
 export const testState: {
@@ -30,6 +39,13 @@ export const testState: {
   zoomAfter: number | undefined;
   imagesList: ImageMetadata[] | undefined;
   nextPendingIndex: number | undefined;
+  lastSearchResult: SearchResultBody | undefined;
+  searchTargetImageId: number | undefined;
+  searchDecoyImageIds: number[] | undefined;
+  filterFixtures: FilterFixture[] | undefined;
+  filterDecoyImageId: number | undefined;
+  expectedMatchImageId: number | undefined;
+  paginationPageSize: number | undefined;
 } = {
   currentImageId: undefined,
   drawnCoordinates: undefined,
@@ -41,6 +57,13 @@ export const testState: {
   zoomAfter: undefined,
   imagesList: undefined,
   nextPendingIndex: undefined,
+  lastSearchResult: undefined,
+  searchTargetImageId: undefined,
+  searchDecoyImageIds: undefined,
+  filterFixtures: undefined,
+  filterDecoyImageId: undefined,
+  expectedMatchImageId: undefined,
+  paginationPageSize: undefined,
 };
 
 export function resetTestState(): void {
@@ -54,4 +77,11 @@ export function resetTestState(): void {
   testState.zoomAfter = undefined;
   testState.imagesList = undefined;
   testState.nextPendingIndex = undefined;
+  testState.lastSearchResult = undefined;
+  testState.searchTargetImageId = undefined;
+  testState.searchDecoyImageIds = undefined;
+  testState.filterFixtures = undefined;
+  testState.filterDecoyImageId = undefined;
+  testState.expectedMatchImageId = undefined;
+  testState.paginationPageSize = undefined;
 }

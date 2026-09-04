@@ -1,9 +1,10 @@
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { After, AfterAll, Before, BeforeAll } from '@cucumber/cucumber';
+import { like } from 'drizzle-orm';
 import { createApiApp } from '../../server/src/app';
 import { db, pool } from '../../server/src/db/client';
-import { annotations } from '../../server/src/db/schema';
+import { annotations, images } from '../../server/src/db/schema';
 import { ensureBucketExists } from '../../server/src/lib/minio';
 import { resetTestState } from './testState';
 
@@ -45,4 +46,11 @@ After(async () => {
   // independent of each other. Categories and seeded images (T-03 fixtures)
   // are never touched — only the mutable `annotations` table.
   await db.delete(annotations);
+
+  // T-08's search/filter scenarios (features/search_operators.feature,
+  // features/filters_and_pagination.feature) insert synthetic images
+  // directly via Drizzle instead of mutating real/seeded ones — those are
+  // marked with this filename prefix so they can be cleaned up here
+  // without touching any real/seeded image.
+  await db.delete(images).where(like(images.filename, '__t08_test_%'));
 });
