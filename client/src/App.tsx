@@ -38,7 +38,7 @@ export function App() {
       {view === 'annotate' && <AnnotationWorkspace />}
       {view === 'dashboard' && <Dashboard />}
       {view === 'search' && <ImageSearch />}
-      {view === 'dashboard' && (
+      {view === 'coco' && (
         <div className="app-light-island">
           <ExportCocoButton />
         </div>

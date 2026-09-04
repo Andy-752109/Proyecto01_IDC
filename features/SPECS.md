@@ -31,22 +31,23 @@ haya ambigüedad entre lo documentado y lo que hay en el repo.
 | SPEC-09 | Los filtros por clase, estado y rango de fechas son combinables y los resultados se paginan correctamente | 5. Dashboard y búsqueda | `filters_and_pagination.feature` | T-08 (Ale — misma reasignación) |
 | SPEC-10 | Las métricas del dashboard se calculan desde la BD; ninguna es un valor fijo | 5. Dashboard y búsqueda | `dashboard_metrics.feature` | T-07 (JuanPa) |
 
-## División de trabajo confirmada por el PM (T-04/T-05/T-06/T-09)
+## División final de tareas (confirmada por el PM)
+
+> Esta sección reemplaza a una versión anterior ("División de trabajo
+> confirmada por el PM (T-04/T-05/T-06/T-09)") que quedó obsoleta una vez
+> que T-06/T-07/T-08/T-09 se asignaron y algunas fronteras cambiaron
+> (p. ej. `GET /api/annotations?imageId=` terminó siendo parte de T-05, no
+> de T-06). Se eliminó esa versión en la auditoría de T-10 para no dejar
+> dos fuentes de verdad contradictorias en el mismo documento.
 
 - **T-04 (JuanPa)**: `/api/images` + MinIO. Cubre SPEC-01.
-- **T-05 (Ale)**: `/api/categories` (solo GET, las 4 categorías vienen del seeder) y
-  `/api/annotations` completo (`POST`, `PATCH /:id`, `DELETE /:id`) con validación Zod 4 —
-  incluida la regla de SPEC-03 (rechazar caja sin categoría válida) y de coordenadas/dimensiones
-  válidas. En el frontend: el canvas de Konva para crear, mover, redimensionar y borrar cajas.
-  Cubre SPEC-02 (excepto reload) y SPEC-03. **No incluye zoom, undo, navegación ni "guardar y
-  siguiente"** — eso es 100% T-06, aunque zoom/undo no dependan de un endpoint nuevo, para que
-  toda la lógica de "canvas tools" viva en una sola tarea y T-05 no se infle.
-- **T-06 (Ale)**: `GET /api/annotations?imageId=` (releer anotaciones al recargar la página) más
-  **todo** `annotation_navigation.feature` (SPEC-04 completo: zoom, undo, guardar-y-siguiente,
-  navegación entre imágenes). También agrega `PATCH /api/images/:id` (en `images.ts`, con
-  autorización explícita del PM para tocar ese archivo de T-04) para marcar `pending → annotated`
-  al usar "Guardar y siguiente" — bug bloqueante detectado en revisión de PR, corregido test-first
-  (commit RED → commit GREEN).
+- **T-05 (Ale)**: anotador — crear, seleccionar, mover, redimensionar y eliminar bounding boxes;
+  categorías, colores y validación de categoría (SPEC-02 salvo reload, SPEC-03).
+- **T-06 (Ale)**: reload/persistencia al recargar + zoom, undo, navegación y guardar/siguiente
+  (el escenario `@wip` de SPEC-02, y SPEC-04 completo). También agrega
+  `PATCH /api/images/:id` (en `images.ts`, con autorización explícita del PM para tocar ese
+  archivo de T-04) para marcar `pending → annotated` al usar "Guardar y siguiente" — bug
+  bloqueante detectado en revisión de PR, corregido test-first (commit RED → commit GREEN).
 - **T-09 (Esteban)**: `/api/export`, solo lectura. Cubre SPEC-05, SPEC-06 y SPEC-07.
 - **T-07 (JuanPa)**: dashboard de métricas — `/api/dashboard/*`, solo lectura, todo resuelto con
   `COUNT`/`GROUP BY` en SQL vía Drizzle (nunca trayendo filas para contar en JS). Cubre SPEC-10,
@@ -125,3 +126,102 @@ commits, no solo en el código final.
   evaluables por comportamiento (no solo por código), en particular la
   exportación COCO, que es donde más se pierden puntos si el JSON no
   corresponde exactamente al formato pedido.
+
+## Auditoría de integración (T-10, 2026-09-03)
+
+Estado tras integrar T-04, T-05, T-06, T-07 y T-09 en `main` (T-08 —
+búsqueda/filtros — sigue sin mergear; ver más abajo).
+
+**Integración end-to-end (verificado manualmente contra el servidor real):**
+carga de imagen → anotación (bounding box + categoría) → persiste al
+recargar (`GET /api/annotations?imageId=`) → "guardar y siguiente" marca la
+imagen como `annotated` → el dashboard refleja el cambio en tiempo real
+(`totalImages`, `annotatedImages`, `totalBoundingBoxes`, objetos por
+categoría) → la exportación COCO incluye la imagen y la anotación con
+`bbox`/`area`/`iscrowd` correctos. Ningún módulo crítico quedó aislado.
+
+**Bugs de integración encontrados y corregidos en esta auditoría:**
+1. En `App.tsx`, el botón de exportar COCO estaba condicionado a
+   `view === 'dashboard'` en vez de `view === 'coco'` (copy-paste al
+   agregar la pestaña) — la pestaña "COCO" no mostraba nada, y el botón
+   aparecía escondido dentro del Dashboard. Corregido.
+2. `features/step-definitions/coco_export.steps.ts` crea una categoría de
+   prueba (`__coco-export-test-category`) con upsert, pero su `After` nunca
+   la borraba — quedaba contaminando la tabla real de `categories` para
+   siempre después de correr `npm run test:bdd` una sola vez: aparecía en
+   `/api/categories`, en el selector de categorías del anotador, en el
+   dashboard, y hasta en el JSON exportado. Corregido: el `After` ahora
+   también borra la categoría de prueba.
+
+**Trazabilidad (Regla → SPEC → .feature → prueba):** verificada contra la
+tabla de arriba. SPEC-01 a SPEC-07 y SPEC-10 tienen `.feature` y step
+definitions reales (no placeholders) que corren con `npm run test:bdd`.
+SPEC-08 y SPEC-09 (T-08) todavía no al momento de esta primera pasada —
+la rama `feature/t08-busqueda-filtros` existía pero no estaba mergeada;
+sus escenarios salían como **undefined**, no en rojo, que era el estado
+esperado mientras T-08 no aterrizara. (Ver la segunda pasada más abajo:
+T-08 ya se integró y esto quedó resuelto.)
+
+**Evidencia TDD (Red→Green→Refactor) — revisada en el historial de git:**
+- SPEC-01 (T-04) y SPEC-10 (T-07): commits `test(...)` → `feat(...)`
+  claros, referenciando la SPEC, con el Red verificado en su momento.
+- SPEC-02/03 (T-05): `564bd53 test(SPEC-02,SPEC-03): ... (RED)` →
+  `c25526c feat(SPEC-02,SPEC-03): ... (GREEN)` — evidencia limpia.
+- SPEC-04 (T-06): el grueso de la funcionalidad (zoom, undo, navegación,
+  aviso de cambios sin guardar) se implementó como una serie de commits
+  `feat(SPEC-04): ...` sin un commit Red explícito inmediatamente antes de
+  cada uno — no cumple estrictamente "el Red ocurre antes del Green" para
+  esa parte. Sí hay un ciclo Red→Green real y bien documentado para un bug
+  puntual reportado por el PM: `50832f9 test(SPEC-04): ... en rojo (RED) —
+  bug reportado por PM` → `bb2109c fix(SPEC-04): ... (GREEN)`.
+- SPEC-05/06/07 (T-09): la lógica de exportación (`coco.service.ts`) sí
+  tiene un ciclo limpio: `d00a6a9 test(export): ... (RED)` →
+  `8beb3c9 feat(export): ... (GREEN)`. La integración de esa lógica al
+  resto de la app (botón en `App.tsx`, montar el router) pasó por varios
+  commits sin prefijo convencional ni referencia a SPEC ni etiqueta
+  Red/Green (`wip`, `reparacion nombre y trade-off`, `Correccion (ERROR,
+  se sobreescribieron cambios)`, `Falto agregar boton COCO`) — funcionan
+  (los tests pasan), pero no dejan evidencia TDD legible ahí.
+
+No se reescribió el historial de nadie para "arreglar" estos huecos — la
+rúbrica es explícita en que la evidencia TDD no se puede reconstruir
+artificialmente al final, así que esto queda documentado como hallazgo,
+no corregido retroactivamente.
+
+**Prueba de que las pruebas prueban algo real (mutation spot-check):**
+se rompió a propósito el límite de tamaño de subida (SPEC-01) y el cálculo
+de `area` en la exportación COCO (SPEC-06), y en ambos casos la prueba
+correspondiente falló de inmediato; se revirtió después. Confirma que no
+son pruebas "de teatro".
+
+**Git/PR:** todo commit en `main` llega vía un merge commit de PR (`git log
+main --first-parent` solo muestra "Merge pull request #N" y el setup
+inicial) — cero pushes directos a `main`. Sin conflictos pendientes.
+`main` queda estable después de esta auditoría: `npm run typecheck`,
+`npm run check` (Biome), `npm test` y `npm run test:bdd` en verde.
+
+### Segunda pasada (2026-09-04): T-08 ya mergeado
+
+T-08 (PR #22, reasignada a Ale) aterrizó en `main` mientras esta auditoría
+seguía abierta. Se repitió la verificación completa con T-08 incluido:
+
+- `npm run test:bdd`: **31/31 escenarios, 0 undefined, 0 fallos** — SPEC-08
+  y SPEC-09 ya tienen step definitions reales y quedan cubiertas.
+- Búsqueda (`GET /api/images/search`) resuelta 100% en SQL: `GROUP BY` +
+  `HAVING COUNT(DISTINCT categories.name) = N` para el AND de SPEC-08 (una
+  imagen solo califica si tiene anotaciones en *todas* las categorías
+  pedidas), `WHERE` combinable con `status`/`dateFrom`/`dateTo`, y
+  `LIMIT`/`OFFSET` + `COUNT()` aparte para la paginación de SPEC-09. Nada
+  se filtra en JavaScript. Verificado también end-to-end contra el
+  servidor real.
+- Los dos bugs de integración de esta auditoría (botón COCO, categoría de
+  prueba sin limpiar) seguían presentes en el `main` con T-08 ya
+  integrado — se confirmaron otra vez y el fix se rebaseó sobre esta
+  versión sin cambios de fondo, solo resolviendo el conflicto esperado en
+  `App.tsx` (T-08 agregó su propia pestaña "Buscar" en el mismo archivo).
+- `npm run typecheck`, `npm run check` y `npm test` (33/33) siguen en
+  verde con T-08 integrado.
+
+Con esto, **las 6 tareas de implementación (T-04 a T-09) están integradas
+en `main`** y las 10 SPECs tienen trazabilidad completa a `.feature` y
+step definitions reales.
