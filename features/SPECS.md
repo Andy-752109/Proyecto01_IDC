@@ -21,43 +21,62 @@ haya ambigüedad entre lo documentado y lo que hay en el repo.
 | SPEC ID | Regla de negocio | Sección rúbrica | Archivo .feature | Tarea |
 |---------|-------------------|------------------|-------------------|-------|
 | SPEC-01 | Solo se aceptan imágenes de tipo y tamaño válidos, con feedback al usuario | 4. Portal de anotación | `image_upload.feature` | T-04 |
-| SPEC-02 | Una caja (bounding box) se puede crear, mover, redimensionar y borrar, y persiste al recargar | 4. Portal de anotación | `bounding_box_create_edit.feature` | T-05 (excepto el escenario `@wip` de reload, que es T-06) |
+| SPEC-02 | Una caja (bounding box) se puede crear, mover, redimensionar y borrar, y persiste al recargar | 4. Portal de anotación | `bounding_box_create_edit.feature` | T-05 (excepto el escenario de reload, que es T-06) |
 | SPEC-03 | Ninguna caja puede guardarse sin una categoría válida asignada | 4. Portal de anotación | `bounding_box_requires_category.feature` | T-05 |
 | SPEC-04 | El usuario puede hacer zoom, deshacer, navegar entre imágenes y usar "guardar y siguiente", incluyendo qué pasa si hay cambios sin guardar al navegar | 4. Portal de anotación | `annotation_navigation.feature` | T-06 completo (issue #6: "persistir anotaciones + herramientas del anotador") |
 | SPEC-05 | El dataset exportado es un JSON COCO válido con `images`, `annotations` y `categories`, con IDs consistentes entre secciones (7 pts) | 6. Salida COCO | `coco_export_structure.feature` | T-09 |
 | SPEC-06 | El `bbox` se exporta como `[x, y, width, height]` en píxeles absolutos, con `area` coherente e `iscrowd` presente (3 pts) | 6. Salida COCO | `coco_bbox_format.feature` | T-09 |
 | SPEC-07 | El dataset completo se puede descargar como archivo, sin excluir nada (2 pts) — separado de SPEC-06 porque en la rúbrica es un sub-punto distinto | 6. Salida COCO | `coco_full_export.feature` | T-09 |
-| SPEC-08 | La búsqueda soporta el operador AND entre categorías | 5. Dashboard y búsqueda | `search_operators.feature` | T-08 (Esteban) |
-| SPEC-09 | Los filtros por clase, estado y rango de fechas son combinables y los resultados se paginan correctamente | 5. Dashboard y búsqueda | `filters_and_pagination.feature` | T-08 (Esteban) |
+| SPEC-08 | La búsqueda soporta el operador AND entre categorías, resuelta en SQL | 5. Dashboard y búsqueda | `search_operators.feature` | T-08 (Ale — reasignada por el PM el 2026-09-03, Esteban no había avanzado) |
+| SPEC-09 | Los filtros por clase, estado y rango de fechas son combinables y los resultados se paginan correctamente | 5. Dashboard y búsqueda | `filters_and_pagination.feature` | T-08 (Ale — misma reasignación) |
 | SPEC-10 | Las métricas del dashboard se calculan desde la BD; ninguna es un valor fijo | 5. Dashboard y búsqueda | `dashboard_metrics.feature` | T-07 (JuanPa) |
 
 ## División de trabajo confirmada por el PM (T-04/T-05/T-06/T-09)
 
 - **T-04 (JuanPa)**: `/api/images` + MinIO. Cubre SPEC-01.
-- **T-05 (Ale, este documento)**: `/api/categories` (solo GET, las 4 categorías vienen del seeder) y
+- **T-05 (Ale)**: `/api/categories` (solo GET, las 4 categorías vienen del seeder) y
   `/api/annotations` completo (`POST`, `PATCH /:id`, `DELETE /:id`) con validación Zod 4 —
   incluida la regla de SPEC-03 (rechazar caja sin categoría válida) y de coordenadas/dimensiones
   válidas. En el frontend: el canvas de Konva para crear, mover, redimensionar y borrar cajas.
   Cubre SPEC-02 (excepto reload) y SPEC-03. **No incluye zoom, undo, navegación ni "guardar y
   siguiente"** — eso es 100% T-06, aunque zoom/undo no dependan de un endpoint nuevo, para que
   toda la lógica de "canvas tools" viva en una sola tarea y T-05 no se infle.
-- **T-06 (sin asignar todavía, issue #6: "persistir anotaciones + herramientas del anotador")**:
-  `GET /api/annotations?imageId=` (releer anotaciones al recargar la página) — el escenario
-  `@wip` dentro de `bounding_box_create_edit.feature` — más **todo** `annotation_navigation.feature`
-  (SPEC-04 completo: zoom, undo, guardar-y-siguiente, navegación entre imágenes). T-06 es quien
-  crea `step-definitions/annotation_navigation.steps.ts`; T-05 no lo incluye.
+- **T-06 (Ale)**: `GET /api/annotations?imageId=` (releer anotaciones al recargar la página) más
+  **todo** `annotation_navigation.feature` (SPEC-04 completo: zoom, undo, guardar-y-siguiente,
+  navegación entre imágenes). También agrega `PATCH /api/images/:id` (en `images.ts`, con
+  autorización explícita del PM para tocar ese archivo de T-04) para marcar `pending → annotated`
+  al usar "Guardar y siguiente" — bug bloqueante detectado en revisión de PR, corregido test-first
+  (commit RED → commit GREEN).
 - **T-09 (Esteban)**: `/api/export`, solo lectura. Cubre SPEC-05, SPEC-06 y SPEC-07.
-
-## División final de tareas (confirmada por el PM)
-
-- **T-05 (Ale)**: anotador — crear, seleccionar, mover, redimensionar y eliminar bounding boxes;
-  categorías, colores y validación de categoría (SPEC-02 salvo reload, SPEC-03).
-- **T-06 (Ale)**: reload/persistencia al recargar + zoom, undo, navegación y guardar/siguiente
-  (el escenario `@wip` de SPEC-02, y SPEC-04 completo).
 - **T-07 (JuanPa)**: dashboard de métricas — `/api/dashboard/*`, solo lectura, todo resuelto con
   `COUNT`/`GROUP BY` en SQL vía Drizzle (nunca trayendo filas para contar en JS). Cubre SPEC-10,
   con su propio `dashboard_metrics.feature`.
-- **T-08 (Esteban)**: búsqueda + filtros/paginación (SPEC-08, SPEC-09).
+- **T-08 (Ale, reasignada)**: `GET /api/images/search` — búsqueda con AND de categorías
+  (SPEC-08) y filtros combinables de clase/estado/rango de fechas con paginación (SPEC-09).
+  Endpoint nuevo y separado de `GET /api/images` (no se tocó ese, para no arriesgar nada de lo
+  que ya dependía de él en T-05/T-06). En el frontend: pestaña "Buscar" con chips de categoría,
+  filtro de estado, rango de fechas y resultados paginados.
+
+## Detalle de implementación — T-08 (SPEC-08 + SPEC-09)
+
+- **Endpoint**: `GET /api/images/search`, en `server/src/routes/images.ts`. Registrado
+  **antes** de `GET /:id` (mismo tipo de bug de orden de rutas que ya se corrigió una vez en
+  `annotations.ts` — si no, Express interpretaría `search` como un `:id`).
+- **AND real en SQL**: se resuelve con `GROUP BY annotations.image_id` +
+  `HAVING COUNT(DISTINCT categories.name) = N` (N = número de categorías pedidas) — una imagen
+  solo califica si tiene anotaciones en **todas** las categorías solicitadas, no en cualquiera.
+  Nada se filtra en JavaScript; el query hace todo el trabajo.
+- **Filtros + paginación**: `status`, `dateFrom`/`dateTo` (contra `images.createdAt`) y
+  `page`/`pageSize` se combinan con `AND` en el `WHERE`, con `LIMIT`/`OFFSET` para la página y
+  una consulta `COUNT()` aparte (mismas condiciones) para el total — ambas 100% SQL.
+- **Frontend**: `client/src/features/search/` (`ImageSearch.tsx`, `useImageSearch.ts`,
+  `schemas.ts` con validación Zod de la respuesta, `search.css`). Pestaña nueva `"search"` en
+  `App.tsx`, junto a las demás.
+- **Aislamiento de datos de prueba**: los escenarios de Gherkin insertan imágenes **sintéticas**
+  directo por Drizzle (prefijo `__t08_test_` en el filename) en vez de mutar imágenes reales
+  sembradas — se limpian solas en el hook `After` de `features/support/hooks.ts`. La primera
+  versión sí mutaba imágenes reales (status/createdAt) y esto contaminó el escenario de T-06
+  "Save and move to the next image" en corridas posteriores; quedó corregido antes de mergear.
 
 ## Nota sobre `annotation_navigation.feature` en el checker de T-05
 
@@ -66,10 +85,6 @@ Como T-05 no trae `step-definitions/annotation_navigation.steps.ts`, al correr
 es el comportamiento esperado mientras T-06 no exista. No se etiquetó `@wip` porque el archivo
 completo pertenece a otra tarea, no es "trabajo pendiente dentro de T-05".
 
-El único escenario `@wip` real que sí vive dentro del scope de T-05 es "Annotations persist
-after reloading the image" en `bounding_box_create_edit.feature` (el resto de ese archivo sí es
-de T-05 y sí tiene step definitions en rojo).
-
 ## Decisiones abiertas (pendientes de confirmar antes de implementar/TDD)
 
 ### ✅ Resuelto: alcance de los operadores de búsqueda (SPEC-08)
@@ -77,30 +92,14 @@ de T-05 y sí tiene step definitions en rojo).
 **Decisión del PM (2026-09-02):** solo se implementa **AND**. La rúbrica solo dio "car AND
 person" como ejemplo; OR y NOT eran una asunción nuestra pendiente de confirmar, y se
 descartaron para no rehacer trabajo más adelante sobre algo que el profesor no pidió.
-`search_operators.feature` y su step definitions ya se simplificaron para reflejar esto — el
-`Feature` ahora se llama "Search with the AND operator over categories", sin escenarios de OR/NOT.
 
-### 🟡 Cómo se verifica "resuelto en SQL, no en memoria" (SPEC-08)
+### ✅ Resuelto: cómo se verifica "resuelto en SQL, no en memoria" (SPEC-08)
 
-Esto es una decisión de **estrategia de prueba**, no de negocio, así que se
-sacó del Gherkin (un escenario de negocio no debería mencionar SQL como
-detalle de implementación). El comportamiento observable para el usuario
-es "obtengo las imágenes que cumplen la búsqueda" — eso es lo que valida
-el `.feature`. La forma de comprobar que el backend en verdad usa SQL y no
-un `filter()` en memoria le toca decidirla a quien escriba el step
-definition y/o el test unitario del backend, por ejemplo:
-
-- Espiar/mockear el query builder de Drizzle y verificar que la condición
-  `AND`/`OR`/`NOT` llega a la cláusula `WHERE` generada, en vez de revisar
-  el resultado final.
-- O un test de integración con un dataset lo bastante grande para que un
-  filtrado en memoria sea detectablemente más lento (frágil, no recomendado
-  como única prueba).
-
-Se recomienda la primera opción (verificar la query generada) porque es
-determinística y no depende de tiempos de ejecución. Falta que sanchezesteban
-confirme qué tan fácil es espiar el query builder con el esquema que arme
-en T-03.
+Implementado en `GET /api/images/search`: la coincidencia de categorías se calcula con
+`GROUP BY` + `HAVING COUNT(DISTINCT ...)` directamente en la base de datos (ver "Detalle de
+implementación" arriba), no con un `.filter()` en JavaScript sobre el resultado completo. Las
+pruebas de Gherkin verifican el comportamiento observable (qué imágenes regresa la búsqueda),
+no la query SQL en sí — que es justo lo que se había recomendado en la decisión original.
 
 ## Cómo usar esto para TDD (ciclo Red-Green-Refactor)
 
@@ -126,6 +125,3 @@ commits, no solo en el código final.
   evaluables por comportamiento (no solo por código), en particular la
   exportación COCO, que es donde más se pierden puntos si el JSON no
   corresponde exactamente al formato pedido.
-- Falta mapear los step definitions reales (los `.feature` son la
-  especificación, no la implementación) — eso depende de cómo Juan deje el
-  setup en T-01 y de cómo sanchezesteban modele el esquema en T-03.
