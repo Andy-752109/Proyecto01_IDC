@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { useEffect, useState } from 'react';
 import { Bar, BarChart, Cell, Tooltip, XAxis, YAxis } from 'recharts';
 import {
@@ -6,6 +7,7 @@ import {
   fetchDashboardSummary,
   fetchObjectsByCategory,
 } from '../../api/dashboard';
+import './dashboard.css';
 
 type State =
   | { status: 'loading' }
@@ -43,16 +45,18 @@ export function Dashboard() {
 
   if (state.status === 'loading') {
     return (
-      <section aria-label="Dashboard">
-        <output>Cargando métricas...</output>
+      <section aria-label="Dashboard" className="dashboard">
+        <output className="dashboard__hint">Cargando métricas...</output>
       </section>
     );
   }
 
   if (state.status === 'error') {
     return (
-      <section aria-label="Dashboard">
-        <p role="alert">No se pudieron cargar las métricas del dashboard: {state.message}</p>
+      <section aria-label="Dashboard" className="dashboard">
+        <p role="alert" className="dashboard__error">
+          No se pudieron cargar las métricas del dashboard: {state.message}
+        </p>
       </section>
     );
   }
@@ -64,73 +68,96 @@ export function Dashboard() {
       : Math.round((summary.annotatedImages / summary.totalImages) * 100);
 
   return (
-    <section aria-label="Dashboard">
-      <h2>Dashboard</h2>
+    <section aria-label="Dashboard" className="dashboard">
+      <h2 className="dashboard__title">Dashboard</h2>
 
-      <dl>
-        <div>
-          <dt>Total de imágenes</dt>
-          <dd data-testid="metric-total-images">{summary.totalImages}</dd>
+      <div className="dashboard__metrics">
+        <div className="dashboard__metric" style={{ '--metric-color': '#3fa9f5' } as CSSProperties}>
+          <span className="dashboard__metric-label">Total de imágenes</span>
+          <span className="dashboard__metric-value" data-testid="metric-total-images">
+            {summary.totalImages}
+          </span>
         </div>
-        <div>
-          <dt>Imágenes anotadas</dt>
-          <dd data-testid="metric-annotated-images">{summary.annotatedImages}</dd>
+        <div className="dashboard__metric" style={{ '--metric-color': '#2dd4a7' } as CSSProperties}>
+          <span className="dashboard__metric-label">Imágenes anotadas</span>
+          <span className="dashboard__metric-value" data-testid="metric-annotated-images">
+            {summary.annotatedImages}
+          </span>
         </div>
-        <div>
-          <dt>Total de bounding boxes</dt>
-          <dd data-testid="metric-total-boxes">{summary.totalBoundingBoxes}</dd>
+        <div className="dashboard__metric" style={{ '--metric-color': '#f4a261' } as CSSProperties}>
+          <span className="dashboard__metric-label">Total de bounding boxes</span>
+          <span className="dashboard__metric-value" data-testid="metric-total-boxes">
+            {summary.totalBoundingBoxes}
+          </span>
         </div>
-        <div>
-          <dt>Categorías</dt>
-          <dd data-testid="metric-total-categories">{summary.totalCategories}</dd>
+        <div className="dashboard__metric" style={{ '--metric-color': '#a78bfa' } as CSSProperties}>
+          <span className="dashboard__metric-label">Categorías</span>
+          <span className="dashboard__metric-value" data-testid="metric-total-categories">
+            {summary.totalCategories}
+          </span>
         </div>
-      </dl>
-
-      <h3>Progreso de anotación</h3>
-      <p>
-        {summary.annotatedImages} de {summary.totalImages} imágenes anotadas ({progressPercent}%)
-      </p>
-      <div
-        role="progressbar"
-        tabIndex={0}
-        aria-valuenow={progressPercent}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        style={{ background: '#e5e5e5', borderRadius: 4, height: 8, width: '100%' }}
-      >
-        <div
-          style={{
-            width: `${progressPercent}%`,
-            background: '#2a9d8f',
-            height: '100%',
-            borderRadius: 4,
-          }}
-        />
       </div>
 
-      <h3>Objetos por clase</h3>
-      {/* Ancho fijo (no ResponsiveContainer): en jsdom, ResponsiveContainer
-          nunca mide un tamaño real (no hay ResizeObserver que dispare), así
-          que no renderiza nada y el chart queda imposible de testear. Con
-          ancho fijo se sacrifica el resize automático a cambio de un chart
-          que sí se puede probar de verdad; el overflow-x cubre pantallas
-          angostas. */}
-      <div style={{ width: '100%', overflowX: 'auto' }}>
-        <BarChart
-          width={600}
-          height={280}
-          data={objectsByCategory}
-          margin={{ top: 8, right: 16, left: 0, bottom: 8 }}
+      <div className="dashboard__panel">
+        <h3 className="dashboard__section-title">Progreso de anotación</h3>
+        <p className="dashboard__progress-text">
+          {summary.annotatedImages} de {summary.totalImages} imágenes anotadas ({progressPercent}%)
+        </p>
+        <div
+          role="progressbar"
+          tabIndex={0}
+          aria-valuenow={progressPercent}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          className="dashboard__progress-track"
         >
-          <XAxis dataKey="categoryName" tickLine={false} axisLine={{ stroke: '#d4d4d4' }} />
-          <YAxis allowDecimals={false} tickLine={false} axisLine={{ stroke: '#d4d4d4' }} />
-          <Tooltip />
-          <Bar dataKey="objectCount" radius={[4, 4, 0, 0]}>
-            {objectsByCategory.map((category) => (
-              <Cell key={category.categoryId} fill={category.color} />
-            ))}
-          </Bar>
-        </BarChart>
+          <div className="dashboard__progress-fill" style={{ width: `${progressPercent}%` }} />
+        </div>
+      </div>
+
+      <div className="dashboard__panel">
+        <h3 className="dashboard__section-title">Objetos por clase</h3>
+        {/* Ancho fijo (no ResponsiveContainer): en jsdom, ResponsiveContainer
+            nunca mide un tamaño real (no hay ResizeObserver que dispare), así
+            que no renderiza nada y el chart queda imposible de testear. Con
+            ancho fijo se sacrifica el resize automático a cambio de un chart
+            que sí se puede probar de verdad; el overflow-x cubre pantallas
+            angostas. (Comentario y decisión originales de JuanPa, preservados
+            — sigue aplicando igual con el rediseño.) */}
+        <div className="dashboard__chart-scroll">
+          <BarChart
+            width={600}
+            height={280}
+            data={objectsByCategory}
+            margin={{ top: 8, right: 16, left: 0, bottom: 8 }}
+          >
+            <XAxis
+              dataKey="categoryName"
+              tickLine={false}
+              axisLine={{ stroke: '#3d434c' }}
+              tick={{ fill: '#8b8f98', fontSize: 12, fontFamily: 'IBM Plex Sans, sans-serif' }}
+            />
+            <YAxis
+              allowDecimals={false}
+              tickLine={false}
+              axisLine={{ stroke: '#3d434c' }}
+              tick={{ fill: '#8b8f98', fontSize: 12, fontFamily: 'IBM Plex Mono, monospace' }}
+            />
+            <Tooltip
+              contentStyle={{
+                background: '#1c1f24',
+                border: '1px solid #3d434c',
+                color: '#e7e5e0',
+              }}
+              cursor={{ fill: 'rgba(63, 169, 245, 0.08)' }}
+            />
+            <Bar dataKey="objectCount" radius={[2, 2, 0, 0]}>
+              {objectsByCategory.map((category) => (
+                <Cell key={category.categoryId} fill={category.color} />
+              ))}
+            </Bar>
+          </BarChart>
+        </div>
       </div>
     </section>
   );
