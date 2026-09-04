@@ -1,12 +1,12 @@
 import { randomUUID } from 'node:crypto';
-import { desc, eq } from 'drizzle-orm';
+import { and, count, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm';
 import { type Request, type Response, Router } from 'express';
 import { imageSize } from 'image-size';
 import multer, { MulterError } from 'multer';
 import { z } from 'zod';
 import { env } from '../config/env';
 import { db } from '../db/client';
-import { imageStatusValues, images } from '../db/schema';
+import { annotations, categories, imageStatusValues, images } from '../db/schema';
 import { IMAGES_BUCKET, minioClient } from '../lib/minio';
 
 export const MAX_IMAGE_SIZE_BYTES = env.MAX_UPLOAD_MB * 1024 * 1024;
@@ -51,6 +51,21 @@ const updateImageStatusSchema = z.object({
   status: z.enum(imageStatusValues),
 });
 
+// GET /api/images/search query params (SPEC-08 + SPEC-09, T-08).
+// `categories` is a comma-separated list of category names — with one name
+// it's the SPEC-09 "filter by class"; with several it's the SPEC-08 "car
+// AND person" search (an image must have annotations in ALL of them, not
+// just any). `page`/`pageSize` default so callers don't have to think
+// about pagination unless they want a specific slice.
+const searchQuerySchema = z.object({
+  categories: z.string().trim().min(1).optional(),
+  status: z.enum(imageStatusValues).optional(),
+  dateFrom: z.coerce.date().optional(),
+  dateTo: z.coerce.date().optional(),
+  page: z.coerce.number().int().positive().optional().default(1),
+  pageSize: z.coerce.number().int().positive().max(100).optional().default(20),
+});
+
 function serializeImage(row: typeof images.$inferSelect) {
   return { ...row, url: `/api/images/${row.id}/file` };
 }
@@ -65,6 +80,21 @@ function runUpload(req: Request, res: Response): Promise<void> {
       resolve();
     });
   });
+}
+
+// Resolves the AND semantics of SPEC-08 with real SQL aggregation (GROUP BY
+// + HAVING COUNT DISTINCT), not by fetching everything and filtering in
+// JavaScript: an image only qualifies if it has at least one annotation in
+// EVERY requested category, which is exactly what the HAVING clause checks.
+async function findImageIdsMatchingAllCategories(categoryNames: string[]): Promise<number[]> {
+  const rows = await db
+    .select({ imageId: annotations.imageId })
+    .from(annotations)
+    .innerJoin(categories, eq(categories.id, annotations.categoryId))
+    .where(inArray(categories.name, categoryNames))
+    .groupBy(annotations.imageId)
+    .having(sql`count(distinct ${categories.name}) = ${categoryNames.length}`);
+  return rows.map((row) => row.imageId);
 }
 
 export const imagesRouter = Router();
@@ -146,6 +176,78 @@ imagesRouter.get('/', async (_req, res, next) => {
   try {
     const rows = await db.select().from(images).orderBy(desc(images.createdAt));
     res.status(200).json({ images: rows.map(serializeImage) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /api/images/search — MUST be registered before GET /:id, or Express
+// would try to match "search" as an :id param instead of reaching here
+// (the exact route-order bug T-05 hit with /api/annotations earlier).
+imagesRouter.get('/search', async (req, res, next) => {
+  const parsedQuery = searchQuerySchema.safeParse(req.query);
+  if (!parsedQuery.success) {
+    res.status(400).json({ error: 'Invalid search query', details: parsedQuery.error.flatten() });
+    return;
+  }
+  const {
+    categories: categoriesParam,
+    status,
+    dateFrom,
+    dateTo,
+    page,
+    pageSize,
+  } = parsedQuery.data;
+
+  try {
+    const conditions = [];
+
+    if (categoriesParam) {
+      const categoryNames = categoriesParam
+        .split(',')
+        .map((name) => name.trim())
+        .filter((name) => name.length > 0);
+
+      if (categoryNames.length > 0) {
+        const matchingIds = await findImageIdsMatchingAllCategories(categoryNames);
+        if (matchingIds.length === 0) {
+          // Nothing matches all requested categories — short-circuit with a
+          // correctly-paginated empty result instead of calling inArray([]).
+          res.status(200).json({ images: [], total: 0, page, pageSize });
+          return;
+        }
+        conditions.push(inArray(images.id, matchingIds));
+      }
+    }
+
+    if (status) {
+      conditions.push(eq(images.status, status));
+    }
+    if (dateFrom) {
+      conditions.push(gte(images.createdAt, dateFrom));
+    }
+    if (dateTo) {
+      conditions.push(lte(images.createdAt, dateTo));
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const [totalRow] = await db.select({ value: count() }).from(images).where(whereClause);
+
+    const rows = await db
+      .select()
+      .from(images)
+      .where(whereClause)
+      .orderBy(desc(images.createdAt))
+      .limit(pageSize)
+      .offset((page - 1) * pageSize);
+
+    res.status(200).json({
+      images: rows.map(serializeImage),
+      total: totalRow?.value ?? 0,
+      page,
+      pageSize,
+    });
   } catch (error) {
     next(error);
   }
