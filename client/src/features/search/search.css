@@ -1,0 +1,176 @@
+.image-search {
+  --bg: #16181c;
+  --surface: #1c1f24;
+  --border: #2b2f36;
+  --border-strong: #3d434c;
+  --text: #e7e5e0;
+  --text-muted: #8b8f98;
+  --accent: #3fa9f5;
+  --accent-ink: #06141f;
+  --danger: #e5484d;
+
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  font-size: 14px;
+  padding: 16px;
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.image-search__filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.image-search__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.image-search__field label,
+.image-search__label {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.image-search__field select,
+.image-search__field input {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  padding: 6px 8px;
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.image-search__categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 320px;
+}
+
+.image-search__category-chip {
+  padding: 4px 10px;
+  border: 1px solid var(--border-strong);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.image-search__category-chip[data-selected="true"] {
+  border-color: var(--category-color, var(--accent));
+  border-width: 2px;
+  color: var(--category-color, var(--accent));
+}
+
+.image-search__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.image-search__actions button,
+.image-search__pagination button {
+  padding: 6px 14px;
+  border: 1px solid var(--border-strong);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.image-search__actions button:disabled,
+.image-search__pagination button:disabled {
+  border-color: var(--border);
+  color: #52565e;
+  cursor: not-allowed;
+}
+
+.image-search__button--primary {
+  border-color: var(--accent) !important;
+  background: var(--accent) !important;
+  color: var(--accent-ink) !important;
+  font-weight: 600;
+}
+
+.image-search__hint {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.image-search__error {
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.image-search__count {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.image-search__results {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.image-search__result {
+  margin: 0;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.image-search__result img {
+  width: 100%;
+  height: 110px;
+  object-fit: cover;
+  display: block;
+}
+
+.image-search__result figcaption {
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.image-search__filename {
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.image-search__status {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.image-search__pagination {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.image-search__page-label {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 12px;
+  color: var(--text-muted);
+}

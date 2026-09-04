@@ -1,0 +1,105 @@
+.dashboard {
+  --bg: #16181c;
+  --surface: #1c1f24;
+  --border: #2b2f36;
+  --border-strong: #3d434c;
+  --text: #e7e5e0;
+  --text-muted: #8b8f98;
+  --accent: #3fa9f5;
+  --danger: #e5484d;
+
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  padding: 16px;
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dashboard__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.dashboard__hint {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.dashboard__error {
+  color: var(--danger);
+  font-size: 14px;
+}
+
+.dashboard__metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.dashboard__metric {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-left: 3px solid var(--metric-color, var(--accent));
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dashboard__metric-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.dashboard__metric-value {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 28px;
+  font-weight: 500;
+  color: var(--metric-color, var(--text));
+}
+
+.dashboard__panel {
+  border: 1px solid var(--border);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dashboard__section-title {
+  margin: 0;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.dashboard__progress-text {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.dashboard__progress-track {
+  background: var(--border);
+  height: 8px;
+  width: 100%;
+}
+
+.dashboard__progress-fill {
+  background: linear-gradient(90deg, #3fa9f5, #2dd4a7);
+  height: 100%;
+}
+
+.dashboard__chart-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
