@@ -14,7 +14,8 @@ COPY package*.json ./
 RUN npm ci --omit=dev
 COPY --from=build /app/client/dist ./client/dist
 COPY server ./server
+COPY drizzle ./drizzle
 COPY tsconfig*.json ./
 
 EXPOSE 3100
-CMD ["npm", "run", "start"]
+CMD ["sh", "-c", "npm run db:migrate && npm run db:seed && npm run start"]

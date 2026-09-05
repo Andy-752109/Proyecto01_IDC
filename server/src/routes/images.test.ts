@@ -184,7 +184,7 @@ describe('GET /api/images/:id/file', () => {
     expect(response.status).toBe(404);
   });
 
-  it('responde 500 en JSON (sin exponer el stack trace) si el objeto no está en MinIO', async () => {
+  it('responde 404 en JSON si el registro existe en MariaDB pero el objeto no está en MinIO', async () => {
     // Simula un registro cuya metadata existe en MariaDB pero cuyo archivo
     // nunca llegó a MinIO (ej. datos de seed sin objeto real detrás).
     const [result] = await db.insert(images).values({
@@ -199,8 +199,8 @@ describe('GET /api/images/:id/file', () => {
 
     const response = await request(app).get(`/api/images/${result.insertId}/file`);
 
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(404);
     expect(response.type).toBe('application/json');
-    expect(response.body.error).toBe('Error interno del servidor');
+    expect(response.body.error).toBe('El archivo de la imagen no existe en el almacenamiento');
   });
 });
