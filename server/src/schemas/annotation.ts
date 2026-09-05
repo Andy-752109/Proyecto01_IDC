@@ -40,3 +40,7 @@ export const listAnnotationsQuerySchema = z.object({
 });
 
 export type ListAnnotationsQuery = z.infer<typeof listAnnotationsQuerySchema>;
+
+export const annotationIdParamSchema = z.object({
+  id: z.coerce.number().int().positive(),
+});

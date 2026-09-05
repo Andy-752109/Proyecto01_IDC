@@ -3,17 +3,13 @@ import { Router } from 'express';
 import { db } from '../db/client';
 import { annotations, categories, images } from '../db/schema';
 import {
+  annotationIdParamSchema,
   createAnnotationSchema,
   listAnnotationsQuerySchema,
   updateAnnotationSchema,
 } from '../schemas/annotation';
 
 export const annotationsRouter = Router();
-
-function parseId(rawId: string): number | null {
-  const id = Number(rawId);
-  return Number.isInteger(id) && id > 0 ? id : null;
-}
 
 // GET /api/annotations?imageId=... — list annotations for one image.
 // This is what lets the canvas reload existing boxes when the page is
@@ -96,11 +92,12 @@ annotationsRouter.post('/', async (req, res, next) => {
 // PATCH /api/annotations/:id — move (x, y) or resize (width, height).
 annotationsRouter.patch('/:id', async (req, res, next) => {
   try {
-    const id = parseId(req.params.id);
-    if (id === null) {
+    const parsedParams = annotationIdParamSchema.safeParse(req.params);
+    if (!parsedParams.success) {
       res.status(400).json({ error: 'Invalid annotation id' });
       return;
     }
+    const { id } = parsedParams.data;
 
     const parseResult = updateAnnotationSchema.safeParse(req.body);
     if (!parseResult.success) {
@@ -128,11 +125,12 @@ annotationsRouter.patch('/:id', async (req, res, next) => {
 // DELETE /api/annotations/:id
 annotationsRouter.delete('/:id', async (req, res, next) => {
   try {
-    const id = parseId(req.params.id);
-    if (id === null) {
+    const parsedParams = annotationIdParamSchema.safeParse(req.params);
+    if (!parsedParams.success) {
       res.status(400).json({ error: 'Invalid annotation id' });
       return;
     }
+    const { id } = parsedParams.data;
 
     const [existing] = await db.select().from(annotations).where(eq(annotations.id, id)).limit(1);
     if (!existing) {
