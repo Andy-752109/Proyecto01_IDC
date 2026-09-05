@@ -7,8 +7,8 @@ const fixture: CocoSourceData = {
     { id: 2, name: 'person' },
   ],
   images: [
-    { id: 10, filename: 'street-01.jpg', width: 1280, height: 720 },
-    { id: 11, filename: 'park-01.jpg', width: 1024, height: 768 },
+    { id: 10, storageKey: 'uploads/street-01.jpg', width: 1280, height: 720 },
+    { id: 11, storageKey: 'uploads/park-01.jpg', width: 1024, height: 768 },
   ],
   annotations: [
     { id: 100, imageId: 10, categoryId: 1, x: 12, y: 20, width: 150, height: 80 },

@@ -15,7 +15,7 @@ export interface CategoryRow {
 
 export interface ImageRow {
   id: number;
-  filename: string;
+  storageKey: string;
   width: number;
   height: number;
 }
@@ -48,7 +48,7 @@ export function buildCocoDataset(source: CocoSourceData): CocoDataset {
 
   const cocoImages: CocoImage[] = source.images.map((image) => ({
     id: image.id,
-    file_name: image.filename,
+    file_name: image.storageKey,
     width: image.width,
     height: image.height,
   }));
