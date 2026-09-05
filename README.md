@@ -59,12 +59,11 @@ Para parar: `Ctrl+C` en la terminal de `npm run dev`, y `docker compose down`.
 
 ### Producción / monolito completo (puerto 3100)
 
-```bash
-# en .env: PORT=3100
+​```bash
 docker compose up --build
-```
+​```
 
-Levanta app + MariaDB + MinIO con un solo comando. La app sirve el build de React y la API desde el mismo proceso/puerto.
+Levanta app + MariaDB + MinIO con un solo comando. La app sirve el build de React y la API desde el mismo proceso/puerto. El puerto de este servicio está fijo en `3100` dentro de `docker-compose.yml` (no depende de `PORT` en tu `.env`, que sigue siendo `3000` para el modo on-premise) — no hace falta editar nada a mano entre un modo y otro.
 
 ### Scripts
 

@@ -5,13 +5,18 @@ services:
       dockerfile: Dockerfile
     env_file: .env
     environment:
+      # Fijo a 3100, sin interpolar ${PORT} desde .env: Compose carga .env
+      # automáticamente para resolver variables del propio archivo (no solo
+      # para el contenedor vía env_file), y .env trae PORT=3000 para el modo
+      # on-premise (npm run dev). Si aquí se interpola ${PORT:-3100}, ese
+      # 3000 gana y producción termina sirviendo en el puerto equivocado.
       NODE_ENV: production
-      PORT: ${PORT:-3100}
+      PORT: "3100"
       DATABASE_URL: ${DATABASE_URL}
       MINIO_ENDPOINT: minio
       MINIO_PORT: 9000
     ports:
-      - "${PORT:-3100}:${PORT:-3100}"
+      - "3100:3100"
     depends_on:
       mariadb:
         condition: service_healthy
