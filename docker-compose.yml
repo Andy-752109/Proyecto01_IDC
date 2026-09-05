@@ -12,7 +12,12 @@ services:
       # 3000 gana y producción termina sirviendo en el puerto equivocado.
       NODE_ENV: production
       PORT: "3100"
-      DATABASE_URL: ${DATABASE_URL}
+      # Igual que MINIO_ENDPOINT abajo: no se puede interpolar ${DATABASE_URL}
+      # de .env tal cual, porque ese valor trae "localhost" (para el modo
+      # on-premise, npm run dev fuera de Docker). Dentro del contenedor `app`,
+      # "localhost" es el propio contenedor, no el servicio `mariadb` — hay
+      # que apuntar al hostname del servicio dentro de la red de Compose.
+      DATABASE_URL: mysql://${DB_USER:-annotation_user}:${DB_PASSWORD:-changeme}@mariadb:3306/${DB_NAME:-annotation_portal}
       MINIO_ENDPOINT: minio
       MINIO_PORT: 9000
     ports:

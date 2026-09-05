@@ -12,8 +12,6 @@ Portal web para anotar imágenes con bounding boxes, gestionar categorías, revi
 - Testing: Vitest + React Testing Library · BDD: Cucumber.js
 - Calidad: Biome · Entorno: Docker Compose
 
-## Estado actual: setup y arquitectura base
-
 ## Estado actual
 
 Proyecto completo y funcional: portal de anotación de imágenes con persistencia real,
@@ -42,6 +40,13 @@ Verificado end-to-end: `npm install`, `npm run typecheck`, `npm run check`, `npm
 - Node.js 22+
 - Docker y Docker Compose
 
+### Clonar
+
+```bash
+git clone https://github.com/Andy-752109/Proyecto01_IDC.git
+cd Proyecto01_IDC
+```
+
 ### Setup inicial
 
 ```bash
@@ -66,9 +71,9 @@ Para parar: `Ctrl+C` en la terminal de `npm run dev`, y `docker compose down`.
 
 ### Producción / monolito completo (puerto 3100)
 
-​```bash
+```bash
 docker compose up --build
-​```
+```
 
 Levanta app + MariaDB + MinIO con un solo comando. La app sirve el build de React y la API desde el mismo proceso/puerto. El puerto de este servicio está fijo en `3100` dentro de `docker-compose.yml` (no depende de `PORT` en tu `.env`, que sigue siendo `3000` para el modo on-premise) — no hace falta editar nada a mano entre un modo y otro.
 
@@ -100,31 +105,7 @@ features/           SPECs en Gherkin + step definitions (ver features/README.md)
 
 La UI nunca accede a MariaDB ni a MinIO directamente: todo pasa por `/api/*` en el servidor Express.
 
-## Qué falta
+## Pendiente (fuera del alcance de la rúbrica)
 
-Nada de esto está implementado todavía — el scaffold solo deja la base lista para construirlo:
-
-**Persistencia**
-- Esquema Drizzle (imágenes, anotaciones, categorías) con FKs, índices y tipos
-- Migraciones versionadas (`drizzle-kit`) que se apliquen desde cero sin pasos manuales
-- Seeder idempotente con categorías + imágenes de ejemplo
-- Conexión Drizzle usando `DATABASE_URL` (ya validado en `server/src/config/env.ts`)
-
-**SPECs / Gherkin / TDD**
-- Trazabilidad regla de negocio → SPEC → `.feature` (Given/When/Then)
-- Ciclo Red → Green → Refactor visible en commits separados (no se puede armar al final)
-- Cobertura de reglas críticas de anotación y exportación COCO
-
-**Features de producto**
-- Subida de imágenes con validación de tipo/tamaño y feedback (MinIO)
-- Editor de bounding boxes (Konva): crear, mover, redimensionar, borrar, persistencia al recargar
-- Categorías con color, validación de que ninguna caja quede sin clase
-- Zoom, deshacer, navegación entre imágenes, "guardar y siguiente"
-- Dashboard con métricas reales desde la BD (no hardcodeadas), gráficas (Recharts)
-- Búsqueda con operadores (`car AND person`) resuelta en SQL, filtros combinables + paginación
-- Exportación del dataset a COCO (JSON válido, ids consistentes, bbox en píxeles absolutos, descarga)
-
-**Pendiente de setup**
-- CI (lint + typecheck + tests en cada push/PR)
-- Dockerfile de producción sin probar aún end-to-end (build + run completo)
-- Decidir si se agrega autenticación (no está en la rúbrica como requisito explícito)
+- CI (lint + typecheck + tests en cada push/PR).
+- Decidir si se agrega autenticación (no está en la rúbrica como requisito explícito).
