@@ -331,7 +331,18 @@ imagesRouter.get('/:id/file', async (req, res, next) => {
       return;
     }
 
-    const objectStream = await minioClient.getObject(IMAGES_BUCKET, row.storageKey);
+    const objectStream = await minioClient
+      .getObject(IMAGES_BUCKET, row.storageKey)
+      .catch((error: unknown) => {
+        if (error && typeof error === 'object' && 'code' in error && error.code === 'NoSuchKey') {
+          return null;
+        }
+        throw error;
+      });
+    if (objectStream === null) {
+      res.status(404).json({ error: 'El archivo de la imagen no existe en el almacenamiento' });
+      return;
+    }
     res.status(200).set({
       'Content-Type': row.mimeType,
       'Content-Length': String(row.sizeBytes),

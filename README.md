@@ -14,7 +14,10 @@ Portal web para anotar imágenes con bounding boxes, gestionar categorías, revi
 
 ## Estado actual: setup y arquitectura base
 
-Esto es un scaffold de arranque, no features. Lo que ya está hecho y probado:
+## Estado actual
+
+Proyecto completo y funcional: portal de anotación de imágenes con persistencia real,
+dashboard de métricas, búsqueda con filtros y exportación a formato COCO.
 
 - **Monolito real, un solo puerto**: Express sirve el build de Vite en producción; en desarrollo corre Vite en modo middleware dentro del mismo proceso Express (con HMR). No hay dos servidores ni dos puertos que coordinar — `npm run dev` levanta todo.
 - **Config por entorno con Zod**: `server/src/config/env.ts` valida `process.env` (cargado desde `.env` con `dotenv`) al arrancar. Si falta o está mal una variable, el server falla rápido con un mensaje claro en vez de fallar más adelante de forma confusa.
@@ -23,12 +26,14 @@ Esto es un scaffold de arranque, no features. Lo que ya está hecho y probado:
 - **TypeScript estricto**: `tsconfig.base.json` (compartido) + `tsconfig.client.json` / `tsconfig.server.json`, con `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`. `npm run typecheck` pasa sin errores.
 - **Biome** configurado (`biome.json`) prohibiendo `any` explícito y `console.log`, con `npm run check` en 0 errores / 0 warnings.
 - **Separación UI / Lógica / Datos**: la UI (`client/`) nunca importa nada de `server/src/db` ni del cliente de MinIO. Todo pasa por `/api/*` (`server/src/routes/`).
-- **Vitest** (unit/componentes) y **Cucumber.js** (Gherkin) cableados y funcionando, sin contenido todavía — listos para que se agreguen tests y `.feature` files sin tocar configuración.
-- **Carpetas de trabajo delimitadas** para el resto del equipo, cada una con su propio README explicando qué va ahí:
-  - `server/src/db/` → esquema Drizzle, migraciones, seeder (sanchezesteban)
-  - `features/` → SPECs, `.feature` en Gherkin, step definitions (alebonita)
+- **Persistencia**: esquema Drizzle (imágenes, anotaciones, categorías) con FKs, índices y tipos correctos; migraciones versionadas que se aplican desde cero sin pasos manuales; seeder idempotente con categorías e imágenes de ejemplo (subidas de verdad a MinIO).
+- **Portal de anotación**: subida de imágenes con validación de tipo/tamaño y feedback; editor de bounding boxes (Konva) con crear/mover/redimensionar/borrar y persistencia al recargar; categorías con color y validación de clase obligatoria; zoom, deshacer, navegación entre imágenes y "guardar y siguiente".
+- **Dashboard**: métricas calculadas desde la BD (nunca hardcodeadas) y gráficas por categoría/progreso (Recharts).
+- **Búsqueda**: operadores tipo `car AND person` resueltos en SQL (no en memoria), filtros combinables por clase/estado/rango de fechas, con paginación correcta.
+- **Exportación COCO**: JSON válido con `images`/`annotations`/`categories`, ids consistentes, `bbox` en píxeles absolutos, `area` coherente, `iscrowd` presente, descarga completa del dataset desde la UI.
+- **Vitest** (unit/integración) y **Cucumber.js** (Gherkin, con trazabilidad SPEC → `.feature` → step definitions) cubriendo las reglas críticas de negocio, incluidas anotación y exportación COCO.
 
-Verificado manualmente: `npm install`, `npm run typecheck`, `npm run check`, `docker compose up mariadb minio -d`, y `npm run dev` sirviendo la app en `:3000` con `/api/health` respondiendo `{"status":"ok"}`.
+Verificado end-to-end: `npm install`, `npm run typecheck`, `npm run check`, `npm test`, `npm run test:bdd`, `docker compose up mariadb minio -d` + `npm run db:migrate` + `npm run db:seed` + `npm run dev` sirviendo la app en `:3000`, y `docker compose up --build` sirviendo el monolito completo en `:3100`.
 
 ## Cómo correrlo
 
@@ -50,6 +55,8 @@ Levanta solo la infraestructura (MariaDB + MinIO) con Docker, y el proceso Node 
 
 ```bash
 docker compose up mariadb minio -d
+npm run db:migrate
+npm run db:seed
 npm run dev
 ```
 
